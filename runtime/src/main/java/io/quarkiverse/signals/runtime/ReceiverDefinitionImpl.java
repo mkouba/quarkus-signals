@@ -1,0 +1,120 @@
+package io.quarkiverse.signals.runtime;
+
+import java.lang.annotation.Annotation;
+import java.lang.reflect.Type;
+import java.util.Objects;
+import java.util.Set;
+import java.util.UUID;
+import java.util.function.Function;
+
+import jakarta.enterprise.util.TypeLiteral;
+
+import io.quarkiverse.signals.Receiver;
+import io.quarkiverse.signals.Receiver.ExecutionModel;
+import io.quarkiverse.signals.Receiver.SignalContext;
+import io.quarkiverse.signals.Receivers;
+import io.quarkiverse.signals.Receivers.Registration;
+import io.smallrye.mutiny.Uni;
+
+class ReceiverDefinitionImpl<SIGNAL, RESPONSE> implements Receivers.ReceiverDefinition<SIGNAL, RESPONSE> {
+
+    private final Function<CallbackReceiver<SIGNAL, RESPONSE>, Receivers.Registration> registerFun;
+    private final Type signalType;
+    private Type responseType;
+    private Set<Annotation> qualifiers = Set.of();
+    private ExecutionModel executionModel = ExecutionModel.WORKER_THREAD;
+
+    public ReceiverDefinitionImpl(Type signalType,
+            Function<CallbackReceiver<SIGNAL, RESPONSE>, Receivers.Registration> registerFun) {
+        this.signalType = signalType;
+        this.responseType = null;
+        this.registerFun = registerFun;
+    }
+
+    @Override
+    public Receivers.ReceiverDefinition<SIGNAL, RESPONSE> setQualifiers(Annotation... qualifiers) {
+        // TODO verify annotations are qualifiers
+        this.qualifiers = Set.of(qualifiers);
+        return this;
+    }
+
+    @Override
+    public Receivers.ReceiverDefinition<SIGNAL, RESPONSE> setExecutionModel(ExecutionModel executionModel) {
+        this.executionModel = Objects.requireNonNull(executionModel);
+        return this;
+    }
+
+    @SuppressWarnings("unchecked")
+    @Override
+    public <R> Receivers.ReceiverDefinition<SIGNAL, R> setResponseType(Class<R> responseType) {
+        this.responseType = Objects.requireNonNull(responseType);
+        return (Receivers.ReceiverDefinition<SIGNAL, R>) this;
+    }
+
+    @SuppressWarnings("unchecked")
+    @Override
+    public <R> Receivers.ReceiverDefinition<SIGNAL, R> setResponseType(TypeLiteral<R> responseType) {
+        this.responseType = Objects.requireNonNull(responseType.getType());
+        return (Receivers.ReceiverDefinition<SIGNAL, R>) this;
+    }
+
+    @Override
+    public Registration notify(Function<SignalContext<SIGNAL>, Uni<RESPONSE>> callback) {
+        Objects.requireNonNull(callback);
+        return registerFun.apply(new CallbackReceiver<>(signalType, qualifiers, responseType, executionModel, callback));
+    }
+
+    static class CallbackReceiver<SIGNAL, RESPONSE> implements Receiver<SIGNAL, RESPONSE> {
+
+        private final String id;
+        private final Type signalType;
+        private final Type responseType;
+        private final Set<Annotation> qualifiers;
+        private final ExecutionModel executionModel;
+        private final Function<SignalContext<SIGNAL>, Uni<RESPONSE>> callback;
+
+        CallbackReceiver(Type signalType, Set<Annotation> qualifiers, Type responseType, ExecutionModel executionModel,
+                Function<SignalContext<SIGNAL>, Uni<RESPONSE>> callback) {
+            this.id = UUID.randomUUID().toString();
+            this.signalType = signalType;
+            this.responseType = responseType;
+            this.qualifiers = qualifiers;
+            this.executionModel = executionModel;
+            this.callback = callback;
+        }
+
+        String id() {
+            return id;
+        }
+
+        @Override
+        public Type signalType() {
+            return signalType;
+        }
+
+        @Override
+        public Set<Annotation> qualifiers() {
+            return qualifiers;
+        }
+
+        @Override
+        public Type responseType() {
+            return responseType;
+        }
+
+        @Override
+        public ExecutionModel executionModel() {
+            return executionModel;
+        }
+
+        @Override
+        public Uni<RESPONSE> notify(SignalContext<SIGNAL> context) {
+            try {
+                return callback.apply(context);
+            } catch (Exception e) {
+                return Uni.createFrom().failure(e);
+            }
+        }
+    }
+
+}
