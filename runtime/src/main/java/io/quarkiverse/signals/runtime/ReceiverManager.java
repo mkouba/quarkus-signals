@@ -68,13 +68,7 @@ public class ReceiverManager implements Receivers {
         List<Receiver<?, ?>> matching = new ArrayList<>();
         for (Receiver<?, ?> receiver : receivers.values()) {
             // Reuse the rules for CDI events
-            Set<Annotation> qualifiers = receiver.qualifiers();
-            if (qualifiers.isEmpty()) {
-                qualifiers = Set.of(Any.Literal.INSTANCE, Default.Literal.INSTANCE);
-            } else if (!qualifiers.contains(Any.Literal.INSTANCE)) {
-                qualifiers = new HashSet<>(qualifiers);
-                qualifiers.add(Any.Literal.INSTANCE);
-            }
+            var qualifiers = effectiveQualifiers(receiver.qualifiers());
             if (beanContainer.isMatchingEvent(signalResolvable.signalType(), signalResolvable.qualifiers(),
                     receiver.signalType(), qualifiers)) {
                 if (signalResolvable.responseType() != null
@@ -87,8 +81,7 @@ public class ReceiverManager implements Receivers {
                 matching.add(receiver);
             }
         }
-        LOG.infof("Computed %s receivers for signal type [%s] and qualifiers [%s]", matching.size(),
-                signalResolvable.signalType(), signalResolvable.qualifiers());
+        LOG.infof("Computed %s receivers for: %s", matching.size(), signalResolvable);
         return new RoundRobin<Receiver<?, ?>>(matching.toArray(new Receiver<?, ?>[0]));
     }
 
@@ -111,12 +104,40 @@ public class ReceiverManager implements Receivers {
 
     private Registration register(CallbackReceiver<?, ?> receiver) {
         receivers.put(receiver.id(), receiver);
-        // TODO remove only keys that match the receiver
-        resolvedReceivers.clear();
+        invalidateCache(receiver);
         return () -> {
             receivers.remove(receiver.id());
-            resolvedReceivers.clear();
+            invalidateCache(receiver);
         };
+    }
+
+    private void invalidateCache(Receiver<?, ?> receiver) {
+        var qualifiers = effectiveQualifiers(receiver.qualifiers());
+        resolvedReceivers.keySet().removeIf(key -> {
+            if (!beanContainer.isMatchingEvent(key.signalType(), key.qualifiers(),
+                    receiver.signalType(), qualifiers)) {
+                return false;
+            }
+            if (key.responseType() != null) {
+                if (receiver.responseType() == null || !beanContainer.isMatchingEvent(receiver.responseType(), Set.of(),
+                        key.responseType(), Set.of())) {
+                    return false;
+                }
+            }
+            LOG.infof("Invalidate resolved receivers for: %s", key);
+            return true;
+        });
+    }
+
+    private static Set<Annotation> effectiveQualifiers(Set<Annotation> qualifiers) {
+        if (qualifiers.isEmpty()) {
+            return Set.of(Any.Literal.INSTANCE, Default.Literal.INSTANCE);
+        } else if (!qualifiers.contains(Any.Literal.INSTANCE)) {
+            Set<Annotation> effective = new HashSet<>(qualifiers);
+            effective.add(Any.Literal.INSTANCE);
+            return effective;
+        }
+        return qualifiers;
     }
 
     private record SignalResolvable(Type signalType, Set<Annotation> qualifiers, Type responseType) {
