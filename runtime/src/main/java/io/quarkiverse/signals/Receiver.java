@@ -6,6 +6,7 @@ import java.util.Map;
 import java.util.Set;
 
 import io.quarkiverse.signals.Signal.Request;
+import io.smallrye.common.annotation.CheckReturnValue;
 import io.smallrye.mutiny.Uni;
 
 /**
@@ -76,6 +77,7 @@ public interface Receiver<SIGNAL, RESPONSE> {
      * @param context the signal context
      * @return a {@link Uni} that completes with the response, or with {@code null} for fire-and-forget receivers
      */
+    @CheckReturnValue
     Uni<RESPONSE> notify(SignalContext<SIGNAL> context);
 
     /**

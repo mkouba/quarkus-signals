@@ -2,9 +2,9 @@ package io.quarkiverse.signals;
 
 import java.lang.annotation.Annotation;
 
-import jakarta.enterprise.util.TypeLiteral;
-
+import io.smallrye.common.annotation.CheckReturnValue;
 import io.smallrye.mutiny.Uni;
+import jakarta.enterprise.util.TypeLiteral;
 
 /**
  * Allows the application to emit signals of a particular type and have them delivered to matching receivers.
@@ -109,6 +109,7 @@ public interface Signal<T> {
      * @return a {@link Uni} that completes with the receiver's response
      * @see Receives
      */
+    @CheckReturnValue
     default <R> Uni<R> request(T signal, Class<R> responseType) {
         return unicast().request(responseType).send(signal);
     }
@@ -125,6 +126,7 @@ public interface Signal<T> {
      * @return a {@link Uni} that completes with the receiver's response
      * @see Receives
      */
+    @CheckReturnValue
     default <R> Uni<R> request(T signal, TypeLiteral<R> responseType) {
         return unicast().request(responseType).send(signal);
     }
@@ -175,6 +177,7 @@ public interface Signal<T> {
          * @param signal the signal object
          * @return a {@link Uni} that completes when the emission is processed
          */
+        @CheckReturnValue
         Uni<R> emit(SIGNAL signal);
 
         /**
@@ -239,6 +242,7 @@ public interface Signal<T> {
          * @param signal the signal object
          * @return a {@link Uni} that completes with the receiver's response
          */
+        @CheckReturnValue
         default Uni<RESPONSE> send(SIGNAL signal) {
             return emit(signal);
         }

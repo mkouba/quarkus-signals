@@ -23,6 +23,7 @@ public class PrivateReceiverValidationTest {
     @Singleton
     public static class PrivateReceiverBean {
 
+        @SuppressWarnings("unused")
         private void onMsg(@Receives String msg) {
         }
     }
