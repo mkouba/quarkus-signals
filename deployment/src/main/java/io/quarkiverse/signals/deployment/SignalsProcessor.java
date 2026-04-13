@@ -53,6 +53,7 @@ import io.quarkus.deployment.annotations.BuildStep;
 import io.quarkus.deployment.annotations.Record;
 import io.quarkus.deployment.builditem.GeneratedClassBuildItem;
 import io.quarkus.deployment.builditem.GeneratedResourceBuildItem;
+import io.quarkus.deployment.builditem.nativeimage.ReflectiveClassBuildItem;
 import io.quarkus.gizmo2.ClassOutput;
 import io.quarkus.gizmo2.Const;
 import io.quarkus.gizmo2.Expr;
@@ -69,7 +70,8 @@ class SignalsProcessor {
 
     @BuildStep
     void collectReceivers(BeanRegistrationPhaseBuildItem beanRegistration,
-            InvokerFactoryBuildItem invokerFactory, BuildProducer<ReceiverMethodBuildItem> receivers) {
+            InvokerFactoryBuildItem invokerFactory,
+            BuildProducer<ReceiverMethodBuildItem> receivers) {
 
         Set<DotName> knownQualifiers = beanRegistration.getBeanProcessor().getBeanDeployment().getQualifiers().stream()
                 .map(ci -> ci.name()).collect(Collectors.toSet());
@@ -134,7 +136,8 @@ class SignalsProcessor {
             List<ReceiverMethodBuildItem> receivers,
             BuildProducer<GeneratedClassBuildItem> generatedClasses,
             BuildProducer<GeneratedResourceBuildItem> generatedResources,
-            BuildProducer<SyntheticBeanBuildItem> syntheticBeans) {
+            BuildProducer<SyntheticBeanBuildItem> syntheticBeans,
+            BuildProducer<ReflectiveClassBuildItem> reflectiveClasses) {
 
         ClassOutput classOutput = new GeneratedClassGizmo2Adaptor(generatedClasses, generatedResources,
                 new Function<String, String>() {
@@ -243,6 +246,11 @@ class SignalsProcessor {
             receiverClasses.add(receiverClassName);
             allQualifiers.addAll(receiver.getQualifiers());
         }
+
+        // Register public constructors for reflection
+        reflectiveClasses.produce(ReflectiveClassBuildItem.builder(receiverClasses)
+                .publicConstructors()
+                .build());
 
         syntheticBeans.produce(SyntheticBeanBuildItem.configure(SignalsContext.class)
                 .scope(Dependent.class)
