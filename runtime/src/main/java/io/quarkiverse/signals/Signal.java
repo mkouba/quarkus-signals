@@ -2,9 +2,10 @@ package io.quarkiverse.signals;
 
 import java.lang.annotation.Annotation;
 
+import jakarta.enterprise.util.TypeLiteral;
+
 import io.smallrye.common.annotation.CheckReturnValue;
 import io.smallrye.mutiny.Uni;
-import jakarta.enterprise.util.TypeLiteral;
 
 /**
  * Allows the application to emit signals of a particular type and have them delivered to matching receivers.
@@ -94,7 +95,7 @@ public interface Signal<T> {
      * @see Receives
      */
     default void publish(T signal) {
-        multicast().send(signal);
+        multicast().emitAndForget(signal);
     }
 
     /**
@@ -111,7 +112,7 @@ public interface Signal<T> {
      */
     @CheckReturnValue
     default <R> Uni<R> request(T signal, Class<R> responseType) {
-        return unicast().request(responseType).send(signal);
+        return unicast().request(responseType).emit(signal);
     }
 
     /**
@@ -128,7 +129,7 @@ public interface Signal<T> {
      */
     @CheckReturnValue
     default <R> Uni<R> request(T signal, TypeLiteral<R> responseType) {
-        return unicast().request(responseType).send(signal);
+        return unicast().request(responseType).emit(signal);
     }
 
     /**
@@ -141,7 +142,7 @@ public interface Signal<T> {
      * @see Receives
      */
     default void send(T signal) {
-        unicast().send(signal);
+        unicast().emitAndForget(signal);
     }
 
     /**
@@ -203,10 +204,7 @@ public interface Signal<T> {
          *
          * @param signal the signal object
          */
-        default void send(SIGNAL signal) {
-            emit(signal).subscribe().with(v -> {
-            });
-        }
+        void emitAndForget(SIGNAL signal);
 
         /**
          * Configures this emission as a request-reply with the given response type.
@@ -236,17 +234,6 @@ public interface Signal<T> {
      */
     interface Request<SIGNAL, RESPONSE> extends Emission<SIGNAL, RESPONSE, Request<SIGNAL, RESPONSE>> {
 
-        /**
-         * Emits the signal to a single matching receiver and returns the response.
-         *
-         * @param signal the signal object
-         * @return a {@link Uni} that completes with the receiver's response
-         */
-        @CheckReturnValue
-        default Uni<RESPONSE> send(SIGNAL signal) {
-            return emit(signal);
-        }
-
     }
 
     /**
@@ -261,10 +248,7 @@ public interface Signal<T> {
          *
          * @param signal the signal object
          */
-        default void send(SIGNAL signal) {
-            emit(signal).subscribe().with(v -> {
-            });
-        }
+        void emitAndForget(SIGNAL signal);
 
     }
 }

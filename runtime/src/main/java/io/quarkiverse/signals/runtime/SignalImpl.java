@@ -2,11 +2,14 @@ package io.quarkiverse.signals.runtime;
 
 import java.lang.annotation.Annotation;
 import java.lang.reflect.Type;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.function.Consumer;
 
 import jakarta.enterprise.util.TypeLiteral;
 
@@ -59,18 +62,25 @@ public class SignalImpl<T> implements Signal<T> {
         return new MulticastImpl<>();
     }
 
-    class UnicastImpl<SIGNAL> extends MetadataEmission<UnicastImpl<SIGNAL>> implements Unicast<SIGNAL> {
+    class UnicastImpl<SIGNAL> extends MetadataEmission<UnicastImpl<SIGNAL>> implements Unicast<SIGNAL>, Consumer<Void> {
 
         @Override
         public Uni<Void> emit(SIGNAL signal) {
-            var signalContext = new SignalContextImpl<>(signal, this.meta == null ? Map.of() : Map.copyOf(this.meta),
-                    EmissionType.SEND);
             var receiver = manager.nextReceiver(signalType, qualifiers, null);
             if (receiver != null) {
-                return manager.receiverExecutor().execute(cast(receiver), signalContext).replaceWithVoid();
+                var signalContext = new SignalContextImpl<>(signal, this.meta == null ? Map.of() : Map.copyOf(this.meta),
+                        EmissionType.SEND);
+                return manager.receiverExecutor()
+                        .execute(cast(receiver), signalContext)
+                        .replaceWithVoid();
             } else {
                 return Uni.createFrom().voidItem();
             }
+        }
+
+        @Override
+        public void emitAndForget(SIGNAL signal) {
+            emit(signal).subscribe().with(this);
         }
 
         @Override
@@ -81,6 +91,11 @@ public class SignalImpl<T> implements Signal<T> {
         @Override
         public <RESPONSE> Request<SIGNAL, RESPONSE> request(TypeLiteral<RESPONSE> responseType) {
             return new RequestImpl<>(meta, responseType.getType());
+        }
+
+        @Override
+        public void accept(Void v) {
+            // noop
         }
 
     }
@@ -109,17 +124,31 @@ public class SignalImpl<T> implements Signal<T> {
 
     }
 
-    class MulticastImpl<SIGNAL> extends MetadataEmission<MulticastImpl<SIGNAL>> implements Multicast<SIGNAL> {
+    class MulticastImpl<SIGNAL> extends MetadataEmission<MulticastImpl<SIGNAL>> implements Multicast<SIGNAL>, Consumer<Void> {
 
         @Override
         public Uni<Void> emit(SIGNAL signal) {
+            List<Receiver<?, ?>> receivers = manager.resolveReceivers(signalType, qualifiers);
+            if (receivers.isEmpty()) {
+                return Uni.createFrom().voidItem();
+            }
             var signalContext = new SignalContextImpl<>(signal, this.meta == null ? Map.of() : Map.copyOf(this.meta),
                     EmissionType.PUBLISH);
-            for (Receiver<?, ?> receiver : manager.resolveReceivers(signalType, qualifiers)) {
-                // TODO replace asCompletionStage()
-                manager.receiverExecutor().execute(cast(receiver), signalContext).subscribe().asCompletionStage();
+            List<Uni<Object>> unis = new ArrayList<>(receivers.size());
+            for (Receiver<?, ?> receiver : receivers) {
+                unis.add(manager.receiverExecutor().execute(cast(receiver), signalContext));
             }
-            return Uni.createFrom().voidItem();
+            return Uni.join().all(unis).andCollectFailures().replaceWithVoid();
+        }
+
+        @Override
+        public void accept(Void v) {
+            // noop
+        }
+
+        @Override
+        public void emitAndForget(SIGNAL signal) {
+            emit(signal).subscribe().with(this);
         }
 
     }

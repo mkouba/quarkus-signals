@@ -42,7 +42,7 @@ public class SignalMetadataTest {
                 .request(String.class)
                 .withMeta("traceId", "abc-123")
                 .withMeta("source", "test")
-                .send(new Event("hello"));
+                .emit(new Event("hello"));
 
         String result = uni.ifNoItem()
                 .after(Duration.ofSeconds(1))
