@@ -94,12 +94,12 @@ public class ReceiverManager implements Receivers {
 
     @Override
     public <SIGNAL> ReceiverDefinition<SIGNAL, Void> newReceiver(Class<SIGNAL> signalType) {
-        return new ReceiverDefinitionImpl<>(signalType, this::register);
+        return new ReceiverDefinitionImpl<>(signalType, beanContainer, this::register);
     }
 
     @Override
     public <SIGNAL> ReceiverDefinition<SIGNAL, Void> newReceiver(TypeLiteral<SIGNAL> signalType) {
-        return new ReceiverDefinitionImpl<>(signalType.getType(), this::register);
+        return new ReceiverDefinitionImpl<>(signalType.getType(), beanContainer, this::register);
     }
 
     private Registration register(CallbackReceiver<?, ?> receiver) {

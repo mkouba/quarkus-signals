@@ -7,6 +7,7 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.function.Function;
 
+import jakarta.enterprise.inject.spi.BeanContainer;
 import jakarta.enterprise.util.TypeLiteral;
 
 import io.quarkiverse.signals.Receiver;
@@ -19,21 +20,27 @@ import io.smallrye.mutiny.Uni;
 class ReceiverDefinitionImpl<SIGNAL, RESPONSE> implements Receivers.ReceiverDefinition<SIGNAL, RESPONSE> {
 
     private final Function<CallbackReceiver<SIGNAL, RESPONSE>, Receivers.Registration> registerFun;
+    private final BeanContainer beanContainer;
     private final Type signalType;
     private Type responseType;
     private Set<Annotation> qualifiers = Set.of();
     private ExecutionModel executionModel = ExecutionModel.WORKER_THREAD;
 
-    public ReceiverDefinitionImpl(Type signalType,
+    public ReceiverDefinitionImpl(Type signalType, BeanContainer beanContainer,
             Function<CallbackReceiver<SIGNAL, RESPONSE>, Receivers.Registration> registerFun) {
         this.signalType = signalType;
+        this.beanContainer = beanContainer;
         this.responseType = null;
         this.registerFun = registerFun;
     }
 
     @Override
     public Receivers.ReceiverDefinition<SIGNAL, RESPONSE> setQualifiers(Annotation... qualifiers) {
-        // TODO verify annotations are qualifiers
+        for (Annotation qualifier : qualifiers) {
+            if (!beanContainer.isQualifier(qualifier.annotationType())) {
+                throw new IllegalArgumentException("Not a qualifier: " + qualifier.annotationType().getName());
+            }
+        }
         this.qualifiers = Set.of(qualifiers);
         return this;
     }
