@@ -13,9 +13,9 @@ public class SignalsResourceTest {
     @Test
     public void testHelloEndpoint() {
         given()
-                .when().get("/signals")
+                .when().get("/signals/foo")
                 .then()
                 .statusCode(200)
-                .body(is("Hello signals"));
+                .body(is("Hello foo!"));
     }
 }
