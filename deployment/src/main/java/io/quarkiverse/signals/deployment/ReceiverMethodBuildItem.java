@@ -79,8 +79,11 @@ final class ReceiverMethodBuildItem extends MultiBuildItem implements Comparable
 
     @Override
     public int compareTo(ReceiverMethodBuildItem other) {
-        // TODO compare by declaring class name and method.toString
-        return 0;
+        int cmp = method.declaringClass().name().compareTo(other.method.declaringClass().name());
+        if (cmp == 0) {
+            cmp = method.toString().compareTo(other.method.toString());
+        }
+        return cmp;
     }
 
 }
