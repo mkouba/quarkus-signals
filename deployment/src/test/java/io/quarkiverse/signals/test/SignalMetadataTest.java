@@ -4,6 +4,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import java.time.Duration;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.CopyOnWriteArrayList;
 
 import jakarta.inject.Inject;
@@ -38,10 +39,9 @@ public class SignalMetadataTest {
     public void testMetadata() {
         receivers.captured.clear();
 
-        Uni<String> uni = event.unicast()
+        Uni<String> uni = event.setMetadata(Map.of("traceId", "abc-123", "source", "test"))
+                .unicast()
                 .request(String.class)
-                .withMeta("traceId", "abc-123")
-                .withMeta("source", "test")
                 .emit(new Event("hello"));
 
         String result = uni.ifNoItem()

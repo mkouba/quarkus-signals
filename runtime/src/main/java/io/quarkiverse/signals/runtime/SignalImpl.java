@@ -8,6 +8,7 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 import java.util.function.Consumer;
 
@@ -23,11 +24,13 @@ public class SignalImpl<T> implements Signal<T> {
 
     private final Type signalType;
     private final Set<Annotation> qualifiers;
+    private final Map<String, Object> metadata;
     private final ReceiverManager manager;
 
-    SignalImpl(Type signalType, Set<Annotation> qualifiers, ReceiverManager manager) {
+    SignalImpl(Type signalType, Set<Annotation> qualifiers, Map<String, Object> metadata, ReceiverManager manager) {
         this.signalType = signalType;
         this.qualifiers = qualifiers;
+        this.metadata = metadata;
         this.manager = manager;
     }
 
@@ -35,21 +38,42 @@ public class SignalImpl<T> implements Signal<T> {
     public Signal<T> select(Annotation... qualifiers) {
         Set<Annotation> mergedQualifiers = new HashSet<>(this.qualifiers);
         Collections.addAll(mergedQualifiers, qualifiers);
-        return new SignalImpl<>(signalType, mergedQualifiers, manager);
+        return new SignalImpl<>(signalType, mergedQualifiers, metadata, manager);
     }
 
     @Override
     public <U extends T> Signal<U> select(Class<U> subtype, Annotation... qualifiers) {
         Set<Annotation> mergedQualifiers = new HashSet<>(this.qualifiers);
         Collections.addAll(mergedQualifiers, qualifiers);
-        return new SignalImpl<>(subtype, mergedQualifiers, manager);
+        return new SignalImpl<>(subtype, mergedQualifiers, metadata, manager);
     }
 
     @Override
     public <U extends T> Signal<U> select(TypeLiteral<U> subtype, Annotation... qualifiers) {
         Set<Annotation> mergedQualifiers = new HashSet<>(this.qualifiers);
         Collections.addAll(mergedQualifiers, qualifiers);
-        return new SignalImpl<>(subtype.getType(), mergedQualifiers, manager);
+        return new SignalImpl<>(subtype.getType(), mergedQualifiers, metadata, manager);
+    }
+
+    @Override
+    public Signal<T> putMetadata(String key, Object value) {
+        Objects.requireNonNull(key);
+        Objects.requireNonNull(value);
+        Map<String, Object> meta;
+        if (metadata.isEmpty()) {
+            meta = Map.of(key, value);
+        } else {
+            meta = new HashMap<>(metadata);
+            meta.put(key, value);
+            meta = Map.copyOf(meta);
+        }
+        return new SignalImpl<>(signalType, qualifiers, meta, manager);
+    }
+
+    @Override
+    public Signal<T> setMetadata(Map<String, Object> metadata) {
+        Objects.requireNonNull(metadata);
+        return new SignalImpl<>(signalType, qualifiers, Map.copyOf(metadata), manager);
     }
 
     @Override
@@ -62,14 +86,13 @@ public class SignalImpl<T> implements Signal<T> {
         return new MulticastImpl<>();
     }
 
-    class UnicastImpl<SIGNAL> extends MetadataEmission<UnicastImpl<SIGNAL>> implements Unicast<SIGNAL>, Consumer<Void> {
+    class UnicastImpl<SIGNAL> implements Unicast<SIGNAL>, Consumer<Void> {
 
         @Override
         public Uni<Void> emit(SIGNAL signal) {
             var receiver = manager.nextReceiver(signalType, qualifiers, null);
             if (receiver != null) {
-                var signalContext = new SignalContextImpl<>(signal, this.meta == null ? Map.of() : Map.copyOf(this.meta),
-                        EmissionType.SEND);
+                var signalContext = new SignalContextImpl<>(signal, metadata, EmissionType.SEND);
                 return manager.receiverExecutor()
                         .execute(cast(receiver), signalContext)
                         .replaceWithVoid();
@@ -85,12 +108,12 @@ public class SignalImpl<T> implements Signal<T> {
 
         @Override
         public <RESPONSE> Request<SIGNAL, RESPONSE> request(Class<RESPONSE> responseType) {
-            return new RequestImpl<>(meta, responseType);
+            return new RequestImpl<>(responseType);
         }
 
         @Override
         public <RESPONSE> Request<SIGNAL, RESPONSE> request(TypeLiteral<RESPONSE> responseType) {
-            return new RequestImpl<>(meta, responseType.getType());
+            return new RequestImpl<>(responseType.getType());
         }
 
         @Override
@@ -100,20 +123,17 @@ public class SignalImpl<T> implements Signal<T> {
 
     }
 
-    class RequestImpl<SIGNAL, RESPONSE> extends MetadataEmission<RequestImpl<SIGNAL, RESPONSE>>
-            implements Request<SIGNAL, RESPONSE> {
+    class RequestImpl<SIGNAL, RESPONSE> implements Request<SIGNAL, RESPONSE> {
 
         private final Type responseType;
 
-        public RequestImpl(Map<String, Object> meta, Type responseType) {
-            super(meta != null ? new HashMap<>(meta) : null);
+        public RequestImpl(Type responseType) {
             this.responseType = responseType;
         }
 
         @Override
         public Uni<RESPONSE> emit(SIGNAL signal) {
-            var signalContext = new SignalContextImpl<>(signal, this.meta == null ? Map.of() : Map.copyOf(this.meta),
-                    EmissionType.REQUEST, responseType);
+            var signalContext = new SignalContextImpl<>(signal, metadata, EmissionType.REQUEST, responseType);
             var receiver = manager.nextReceiver(signalType, qualifiers, responseType);
             if (receiver != null) {
                 return cast(manager.receiverExecutor().execute(cast(receiver), signalContext));
@@ -124,7 +144,7 @@ public class SignalImpl<T> implements Signal<T> {
 
     }
 
-    class MulticastImpl<SIGNAL> extends MetadataEmission<MulticastImpl<SIGNAL>> implements Multicast<SIGNAL>, Consumer<Void> {
+    class MulticastImpl<SIGNAL> implements Multicast<SIGNAL>, Consumer<Void> {
 
         @Override
         public Uni<Void> emit(SIGNAL signal) {
@@ -132,8 +152,7 @@ public class SignalImpl<T> implements Signal<T> {
             if (receivers.isEmpty()) {
                 return Uni.createFrom().voidItem();
             }
-            var signalContext = new SignalContextImpl<>(signal, this.meta == null ? Map.of() : Map.copyOf(this.meta),
-                    EmissionType.PUBLISH);
+            var signalContext = new SignalContextImpl<>(signal, metadata, EmissionType.PUBLISH);
             List<Uni<Object>> unis = new ArrayList<>(receivers.size());
             for (Receiver<?, ?> receiver : receivers) {
                 unis.add(manager.receiverExecutor().execute(cast(receiver), signalContext));
@@ -149,33 +168,6 @@ public class SignalImpl<T> implements Signal<T> {
         @Override
         public void emitAndForget(SIGNAL signal) {
             emit(signal).subscribe().with(this);
-        }
-
-    }
-
-    abstract class MetadataEmission<E extends MetadataEmission<E>> {
-
-        protected Map<String, Object> meta = null;
-
-        protected MetadataEmission() {
-            this(null);
-        }
-
-        protected MetadataEmission(Map<String, Object> meta) {
-            this.meta = meta;
-        }
-
-        public E withMeta(String key, Object value) {
-            if (meta == null) {
-                meta = new HashMap<>();
-            }
-            meta.put(key, value);
-            return self();
-        }
-
-        @SuppressWarnings("unchecked")
-        private E self() {
-            return (E) this;
         }
 
     }

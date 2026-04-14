@@ -2,6 +2,7 @@ package io.quarkiverse.signals.runtime;
 
 import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.Type;
+import java.util.Map;
 
 import jakarta.enterprise.inject.spi.InjectionPoint;
 
@@ -19,7 +20,7 @@ public class SignalBeanCreator implements BeanCreator<Object> {
         if (type instanceof ParameterizedType pt && pt.getRawType().equals(Signal.class)) {
             type = pt.getActualTypeArguments()[0];
         }
-        return new SignalImpl<>(type, ip.getQualifiers(), manager);
+        return new SignalImpl<>(type, ip.getQualifiers(), Map.of(), manager);
     }
 
 }

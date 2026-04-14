@@ -1,6 +1,7 @@
 package io.quarkiverse.signals;
 
 import java.lang.annotation.Annotation;
+import java.util.Map;
 
 import jakarta.enterprise.util.TypeLiteral;
 
@@ -85,6 +86,29 @@ public interface Signal<T> {
      * @return the child {@code Signal}
      */
     <U extends T> Signal<U> select(TypeLiteral<U> subtype, Annotation... qualifiers);
+
+    /**
+     * Obtains a child {@code Signal} with the given metadata entry, replacing any previously added entry for the given key
+     * entries.
+     * <p>
+     * <p>
+     * The metadata entries will be used for all emissions from the returned signal instance.
+     *
+     * @param key
+     * @param value
+     * @return the child {@code Signal}
+     */
+    Signal<T> putMetadata(String key, Object value);
+
+    /**
+     * Obtains a child {@code Signal} with the given metadata, replacing any previously added metadata entries.
+     * <p>
+     * The metadata entries will be used for all emissions from the returned signal instance.
+     *
+     * @param metadata
+     * @return the child {@code Signal}
+     */
+    Signal<T> setMetadata(Map<String, Object> metadata);
 
     /**
      * Sends a signal to <em>all</em> receivers matching the specified signal type and qualifiers (multicast).
@@ -180,15 +204,6 @@ public interface Signal<T> {
          */
         @CheckReturnValue
         Uni<R> emit(SIGNAL signal);
-
-        /**
-         * Attaches a metadata entry to this emission, accessible via {@link Receiver.SignalContext#meta()}.
-         *
-         * @param key the metadata key
-         * @param value the metadata value
-         * @return self
-         */
-        E withMeta(String key, Object value);
 
     }
 
