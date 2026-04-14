@@ -88,10 +88,11 @@ public interface Receiver<SIGNAL, RESPONSE> {
     interface SignalContext<T> {
 
         /**
-         * @return the metadata attached to the emission via {@link Signal.Emission#withMeta(String, Object)},
-         *         never {@code null}
+         * @return the metadata attached to the emission, never {@code null}
+         * @see Signal#putMetadata(String, Object)
+         * @see Signal#setMetadata(Map)
          */
-        Map<String, Object> meta();
+        Map<String, Object> metadata();
 
         /**
          * @return the signal object

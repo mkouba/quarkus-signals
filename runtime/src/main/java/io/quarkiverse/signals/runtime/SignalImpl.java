@@ -196,7 +196,7 @@ public class SignalImpl<T> implements Signal<T> {
         }
 
         @Override
-        public Map<String, Object> meta() {
+        public Map<String, Object> metadata() {
             return meta;
         }
 
