@@ -82,7 +82,7 @@ public class ReceiverManager implements Receivers {
             }
         }
         LOG.infof("Computed %s receivers for: %s", matching.size(), signalResolvable);
-        return new RoundRobin<Receiver<?, ?>>(matching.toArray(new Receiver<?, ?>[0]));
+        return new RoundRobin<>(matching);
     }
 
     Receiver<?, ?> nextReceiver(Type signalType,
