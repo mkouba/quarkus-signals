@@ -2,10 +2,14 @@ package io.quarkiverse.signals.runtime;
 
 import jakarta.enterprise.invoke.Invoker;
 
+import org.jboss.logging.Logger;
+
 import io.quarkiverse.signals.Receiver;
 import io.smallrye.mutiny.Uni;
 
 public abstract class InvokerReceiver<SIGNAL, RESPONSE> implements Receiver<SIGNAL, RESPONSE> {
+
+    private static final Logger LOG = Logger.getLogger(InvokerReceiver.class);
 
     private final Invoker<SIGNAL, RESPONSE> invoker;
     private final ReceiveInfo receiveInfo;
@@ -29,7 +33,8 @@ public abstract class InvokerReceiver<SIGNAL, RESPONSE> implements Receiver<SIGN
         Object result;
         try {
             result = invoker.invoke(null, args);
-        } catch (Exception e) {
+        } catch (Throwable e) {
+            LOG.warnf("Notification of InvokerReceiver [%s] failed: %s", invoker.getClass().getName(), e);
             return Uni.createFrom().failure(e);
         }
         Uni<RESPONSE> ret;
@@ -42,6 +47,10 @@ public abstract class InvokerReceiver<SIGNAL, RESPONSE> implements Receiver<SIGN
     }
 
     public record ReceiveInfo(short receiveArgPosition, boolean receiveContext, short totalParams, boolean returnsUni) {
+    }
+
+    public String toString() {
+        return "InvokerReceiver [invoker=" + invoker.getClass().getName() + "]";
     }
 
 }

@@ -10,6 +10,8 @@ import java.util.function.Function;
 import jakarta.enterprise.inject.spi.BeanContainer;
 import jakarta.enterprise.util.TypeLiteral;
 
+import org.jboss.logging.Logger;
+
 import io.quarkiverse.signals.Receiver;
 import io.quarkiverse.signals.Receiver.ExecutionModel;
 import io.quarkiverse.signals.Receiver.SignalContext;
@@ -73,6 +75,8 @@ class ReceiverDefinitionImpl<SIGNAL, RESPONSE> implements Receivers.ReceiverDefi
 
     static class CallbackReceiver<SIGNAL, RESPONSE> implements Receiver<SIGNAL, RESPONSE> {
 
+        private static final Logger LOG = Logger.getLogger(CallbackReceiver.class);
+
         private final String id;
         private final Type signalType;
         private final Type responseType;
@@ -118,10 +122,18 @@ class ReceiverDefinitionImpl<SIGNAL, RESPONSE> implements Receivers.ReceiverDefi
         public Uni<RESPONSE> notify(SignalContext<SIGNAL> context) {
             try {
                 return callback.apply(context);
-            } catch (Exception e) {
+            } catch (Throwable e) {
+                LOG.warnf("Notification of [%s] failed: %s", this, e);
                 return Uni.createFrom().failure(e);
             }
         }
+
+        @Override
+        public String toString() {
+            return "CallbackReceiver [signalType=" + signalType + ", responseType=" + responseType + ", qualifiers="
+                    + qualifiers + ", executionModel=" + executionModel + "]";
+        }
+
     }
 
 }
