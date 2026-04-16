@@ -27,13 +27,13 @@ public class SignalNoReceiverTest {
     @Test
     public void testPublishNoReceiver() {
         // Should not throw
-        orphan.publish(new Orphan("nobody"));
+        orphan.publishAndForget(new Orphan("nobody"));
     }
 
     @Test
     public void testSendNoReceiver() {
         // Should not throw
-        orphan.send(new Orphan("nobody"));
+        orphan.sendAndForget(new Orphan("nobody"));
     }
 
     @Test

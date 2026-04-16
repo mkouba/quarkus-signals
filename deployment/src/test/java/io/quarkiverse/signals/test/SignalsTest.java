@@ -52,13 +52,13 @@ public class SignalsTest {
     @Test
     public void testSignals() throws InterruptedException {
         myReceivers.sequence.clear();
-        foo.publish(new Foo("pub_sub"));
+        foo.publishAndForget(new Foo("pub_sub"));
         Awaitility.await().until(() -> myReceivers.sequence.size() >= 2);
         assertEquals(2, myReceivers.sequence.size());
         assertThat(myReceivers.sequence).contains("blocking_pub_sub", "blockingString_pub_sub");
 
         myReceivers.sequence.clear();
-        foo.send(new Foo("one_to_one"));
+        foo.sendAndForget(new Foo("one_to_one"));
         Awaitility.await().until(() -> myReceivers.sequence.size() >= 1);
         assertEquals(1, myReceivers.sequence.size());
         assertThat(myReceivers.sequence).containsAnyOf("blocking_one_to_one", "blockingString_one_to_one");

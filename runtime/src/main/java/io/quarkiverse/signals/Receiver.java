@@ -5,7 +5,6 @@ import java.lang.reflect.Type;
 import java.util.Map;
 import java.util.Set;
 
-import io.quarkiverse.signals.Signal.Request;
 import io.smallrye.common.annotation.CheckReturnValue;
 import io.smallrye.mutiny.Uni;
 
@@ -54,7 +53,7 @@ public interface Receiver<SIGNAL, RESPONSE> {
     Set<Annotation> qualifiers();
 
     /**
-     * The response type is used during type-safe resolution for {@link Request} emissions. Only receivers whose
+     * The response type is used during type-safe resolution for request emissions. Only receivers whose
      * response type is assignable to the requested type are considered.
      *
      * @return the response type, or {@code null} for fire-and-forget receivers
@@ -149,8 +148,8 @@ public interface Receiver<SIGNAL, RESPONSE> {
     /**
      * The type of emission that triggered the receiver.
      *
-     * @see Signal#publish(Object)
-     * @see Signal#send(Object)
+     * @see Signal#publishAndForget(Object)
+     * @see Signal#sendAndForget(Object)
      * @see Signal#request(Object, Class)
      */
     enum EmissionType {

@@ -77,100 +77,74 @@ public class SignalImpl<T> implements Signal<T> {
     }
 
     @Override
-    public Unicast<T> unicast() {
-        return new UnicastImpl<>();
+    public void publishAndForget(T signal) {
+        publish(signal).subscribe().with(NOOP);
     }
 
     @Override
-    public Multicast<T> multicast() {
-        return new MulticastImpl<>();
-    }
-
-    class UnicastImpl<SIGNAL> implements Unicast<SIGNAL>, Consumer<Void> {
-
-        @Override
-        public Uni<Void> emit(SIGNAL signal) {
-            var receiver = manager.nextReceiver(signalType, qualifiers, null);
-            if (receiver != null) {
-                var signalContext = new SignalContextImpl<>(signal, metadata, EmissionType.SEND);
-                return manager.receiverExecutor()
-                        .execute(cast(receiver), signalContext)
-                        .replaceWithVoid();
-            } else {
-                return Uni.createFrom().voidItem();
-            }
+    public Uni<Void> publish(T signal) {
+        List<Receiver<?, ?>> receivers = manager.resolveReceivers(signalType, qualifiers);
+        if (receivers.isEmpty()) {
+            return Uni.createFrom().voidItem();
         }
-
-        @Override
-        public void emitAndForget(SIGNAL signal) {
-            emit(signal).subscribe().with(this);
-        }
-
-        @Override
-        public <RESPONSE> Request<SIGNAL, RESPONSE> request(Class<RESPONSE> responseType) {
-            return new RequestImpl<>(responseType);
-        }
-
-        @Override
-        public <RESPONSE> Request<SIGNAL, RESPONSE> request(TypeLiteral<RESPONSE> responseType) {
-            return new RequestImpl<>(responseType.getType());
-        }
-
-        @Override
-        public void accept(Void v) {
-            // noop
-        }
-
-    }
-
-    class RequestImpl<SIGNAL, RESPONSE> implements Request<SIGNAL, RESPONSE> {
-
-        private final Type responseType;
-
-        public RequestImpl(Type responseType) {
-            this.responseType = responseType;
-        }
-
-        @Override
-        public Uni<RESPONSE> emit(SIGNAL signal) {
-            var signalContext = new SignalContextImpl<>(signal, metadata, EmissionType.REQUEST, responseType);
-            var receiver = manager.nextReceiver(signalType, qualifiers, responseType);
-            if (receiver != null) {
-                return cast(manager.receiverExecutor().execute(cast(receiver), signalContext));
-            } else {
-                return Uni.createFrom().nullItem();
-            }
-        }
-
-    }
-
-    class MulticastImpl<SIGNAL> implements Multicast<SIGNAL>, Consumer<Void> {
-
-        @Override
-        public Uni<Void> emit(SIGNAL signal) {
-            List<Receiver<?, ?>> receivers = manager.resolveReceivers(signalType, qualifiers);
-            if (receivers.isEmpty()) {
-                return Uni.createFrom().voidItem();
-            }
-            var signalContext = new SignalContextImpl<>(signal, metadata, EmissionType.PUBLISH);
+        var signalContext = new SignalContextImpl<>(signal, metadata, EmissionType.PUBLISH);
+        return Uni.createFrom().deferred(() -> {
             List<Uni<Object>> unis = new ArrayList<>(receivers.size());
             for (Receiver<?, ?> receiver : receivers) {
                 unis.add(manager.receiverExecutor().execute(cast(receiver), signalContext));
             }
             return Uni.join().all(unis).andCollectFailures().replaceWithVoid();
+        });
+    }
+
+    @Override
+    public <R> Uni<R> request(T signal, Class<R> responseType) {
+        return request(signal, (Type) responseType);
+    }
+
+    @Override
+    public <R> Uni<R> request(T signal, TypeLiteral<R> responseType) {
+        return request(signal, responseType.getType());
+    }
+
+    private <R> Uni<R> request(T signal, Type responseType) {
+        var receiver = manager.nextReceiver(signalType, qualifiers, responseType);
+        if (receiver != null) {
+            var signalContext = new SignalContextImpl<>(signal, metadata, EmissionType.REQUEST, responseType);
+            return Uni.createFrom().deferred(() -> cast(manager.receiverExecutor().execute(cast(receiver), signalContext)));
+        } else {
+            return Uni.createFrom().nullItem();
         }
+    }
+
+    @Override
+    public void sendAndForget(T signal) {
+        send(signal).subscribe().with(NOOP);
+    }
+
+    @Override
+    public Uni<Void> send(T signal) {
+        var receiver = manager.nextReceiver(signalType, qualifiers, null);
+        if (receiver != null) {
+            var signalContext = new SignalContextImpl<>(signal, metadata, EmissionType.SEND);
+            return Uni.createFrom().deferred(() -> {
+                return manager.receiverExecutor()
+                        .execute(cast(receiver), signalContext)
+                        .replaceWithVoid();
+            });
+
+        } else {
+            return Uni.createFrom().voidItem();
+        }
+    }
+
+    private static final Consumer<Void> NOOP = new Consumer<Void>() {
 
         @Override
-        public void accept(Void v) {
+        public void accept(Void t) {
             // noop
         }
-
-        @Override
-        public void emitAndForget(SIGNAL signal) {
-            emit(signal).subscribe().with(this);
-        }
-
-    }
+    };
 
     @SuppressWarnings("unchecked")
     private static <T> T cast(Object obj) {

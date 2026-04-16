@@ -40,7 +40,7 @@ public class SignalSelectSubtypeTest {
         receivers.sequence.clear();
 
         // Select TaskCreated subtype — should reach only the TaskCreated receiver
-        taskEvent.select(TaskCreated.class).publish(new TaskCreated("build"));
+        taskEvent.select(TaskCreated.class).publishAndForget(new TaskCreated("build"));
         Awaitility.await().until(() -> receivers.sequence.size() >= 1);
         assertEquals(1, receivers.sequence.size());
         assertEquals("created_build", receivers.sequence.get(0));

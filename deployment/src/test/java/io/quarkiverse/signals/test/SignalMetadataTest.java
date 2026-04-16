@@ -42,9 +42,7 @@ public class SignalMetadataTest {
         Signal<Event> eventWithMeta = event.setMetadata(Map.of("traceId", "abc-123", "source", "test"));
 
         Uni<String> uni = eventWithMeta
-                .unicast()
-                .request(String.class)
-                .emit(new Event("hello"));
+                .request(new Event("hello"), String.class);
 
         String result = uni.ifNoItem()
                 .after(Duration.ofSeconds(1))
