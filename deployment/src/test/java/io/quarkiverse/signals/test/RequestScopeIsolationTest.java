@@ -50,6 +50,16 @@ public class RequestScopeIsolationTest {
                 .await().indefinitely();
     }
 
+    @Test
+    public void testBlockingReceiverHasSeparateRequestScopeAwait() {
+        sender.sendBlockingAndAwait();
+    }
+
+    @Test
+    public void testReactiveReceiverHasSeparateRequestScopeAwait() {
+        sender.sendReactiveAndAwait();
+    }
+
     @Singleton
     public static class SignalSender {
 
@@ -84,6 +94,24 @@ public class RequestScopeIsolationTest {
                                 "Reactive receiver should run in a separate request scope");
                     })
                     .replaceWithVoid();
+        }
+
+        @ActivateRequestContext
+        void sendBlockingAndAwait() {
+            int outerIdentity = identityService.getId();
+            int receiverIdentity = blockingSignal.requestAndAwait(new BlockingCmd(), Integer.class);
+            assertEquals(outerIdentity, identityService.getId());
+            assertNotEquals(outerIdentity, receiverIdentity,
+                    "Blocking receiver should run in a separate request scope");
+        }
+
+        @ActivateRequestContext
+        void sendReactiveAndAwait() {
+            int outerIdentity = identityService.getId();
+            int receiverIdentity = reactiveSignal.requestAndAwait(new ReactiveCmd(), Integer.class);
+            assertEquals(outerIdentity, identityService.getId());
+            assertNotEquals(outerIdentity, receiverIdentity,
+                    "Reactive receiver should run in a separate request scope");
         }
     }
 
