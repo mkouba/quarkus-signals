@@ -165,6 +165,40 @@ public interface Signal<T> {
     <R> Uni<R> request(T signal, TypeLiteral<R> responseType);
 
     /**
+     * Sends a signal to a <em>single</em> receiver matching the specified signal type, response type and qualifiers, and
+     * blocks until the response is available (unicast, request-reply).
+     * <p>
+     * If multiple receivers match, one is selected in round-robin order.
+     *
+     * @param <R> the response type
+     * @param signal the signal object
+     * @param responseType the expected response type
+     * @return the receiver's response
+     * @see #request(Object, Class)
+     * @see Receives
+     */
+    default <R> R requestAndAwait(T signal, Class<R> responseType) {
+        return request(signal, responseType).await().indefinitely();
+    }
+
+    /**
+     * Sends a signal to a <em>single</em> receiver matching the specified signal type, response type and qualifiers, and
+     * blocks until the response is available (unicast, request-reply).
+     * <p>
+     * If multiple receivers match, one is selected in round-robin order.
+     *
+     * @param <R> the response type
+     * @param signal the signal object
+     * @param responseType a {@link TypeLiteral} representing the expected response type
+     * @return the receiver's response
+     * @see #request(Object, TypeLiteral)
+     * @see Receives
+     */
+    default <R> R requestAndAwait(T signal, TypeLiteral<R> responseType) {
+        return request(signal, responseType).await().indefinitely();
+    }
+
+    /**
      * Sends a signal to a <em>single</em> receiver matching the specified signal type and qualifiers
      * (unicast, fire-and-forget).
      * <p>

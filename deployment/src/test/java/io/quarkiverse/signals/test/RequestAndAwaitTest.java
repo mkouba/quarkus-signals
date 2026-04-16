@@ -1,0 +1,73 @@
+package io.quarkiverse.signals.test;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+
+import jakarta.inject.Inject;
+import jakarta.inject.Singleton;
+
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
+
+import io.quarkiverse.signals.Receives;
+import io.quarkiverse.signals.Signal;
+import io.quarkus.test.QuarkusUnitTest;
+import io.smallrye.mutiny.Uni;
+
+/**
+ * Verifies that {@link Signal#requestAndAwait(Object, Class)} blocks until the response is available.
+ */
+public class RequestAndAwaitTest {
+
+    @RegisterExtension
+    static final QuarkusUnitTest test = new QuarkusUnitTest()
+            .withApplicationRoot(root -> root.addClasses(MyReceivers.class, Cmd.class));
+
+    @Inject
+    Signal<Cmd> signal;
+
+    @Test
+    public void testBlockingReceiver() {
+        String result = signal.requestAndAwait(new Cmd("hello"), String.class);
+        assertEquals("HELLO", result);
+    }
+
+    @Test
+    public void testReactiveReceiver() {
+        Integer result = signal.requestAndAwait(new Cmd("hello"), Integer.class);
+        assertEquals(5, result);
+    }
+
+    @Test
+    public void testNoMatchingReceiver() {
+        Double result = signal.requestAndAwait(new Cmd("hello"), Double.class);
+        assertNull(result);
+    }
+
+    @Test
+    public void testReceiverFailure() {
+        assertThrows(IllegalStateException.class,
+                () -> signal.requestAndAwait(new Cmd("fail"), String.class));
+    }
+
+    @Singleton
+    public static class MyReceivers {
+
+        // Blocking signature → WORKER_THREAD
+        String toUpperCase(@Receives Cmd cmd) {
+            if ("fail".equals(cmd.value())) {
+                throw new IllegalStateException("boom");
+            }
+            return cmd.value().toUpperCase();
+        }
+
+        // Reactive → EVENT_LOOP
+        Uni<Integer> toLength(@Receives Cmd cmd) {
+            return Uni.createFrom().item(cmd.value().length());
+        }
+    }
+
+    record Cmd(String value) {
+    }
+}
