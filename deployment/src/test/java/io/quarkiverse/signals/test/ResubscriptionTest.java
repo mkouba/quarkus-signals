@@ -9,6 +9,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 import jakarta.inject.Inject;
 
+import org.awaitility.Awaitility;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
@@ -18,8 +19,9 @@ import io.quarkus.test.QuarkusUnitTest;
 import io.smallrye.mutiny.Uni;
 
 /**
- * Verifies that each subscription to the {@link Uni} returned by the reactive emission methods
+ * Verifies that the {@link Uni} returned by the reactive emission methods
  * ({@link Signal#publish(Object)}, {@link Signal#send(Object)}, {@link Signal#request(Object, Class)})
+ * is lazy: no signal is emitted until the {@link Uni} is subscribed, and each subscription
  * triggers a new, independent signal emission.
  */
 public class ResubscriptionTest {
@@ -105,6 +107,71 @@ public class ResubscriptionTest {
             String second = uni.ifNoItem().after(Duration.ofSeconds(5)).fail()
                     .await().indefinitely();
             assertEquals("reply_2", second);
+        } finally {
+            reg.unregister();
+        }
+    }
+
+    @Test
+    public void testPublishNoEmissionWithoutSubscription() {
+        AtomicInteger count = new AtomicInteger();
+
+        var reg = receivers.newReceiver(Ping.class)
+                .notify(ctx -> {
+                    count.incrementAndGet();
+                });
+        try {
+            // Create the Uni but do NOT subscribe
+            signal.publish(new Ping("noop"));
+
+            Awaitility.await()
+                    .during(Duration.ofMillis(500))
+                    .atMost(Duration.ofSeconds(1))
+                    .until(() -> count.get() == 0);
+        } finally {
+            reg.unregister();
+        }
+    }
+
+    @Test
+    public void testSendNoEmissionWithoutSubscription() {
+        AtomicInteger count = new AtomicInteger();
+
+        var reg = receivers.newReceiver(Ping.class)
+                .notify(ctx -> {
+                    count.incrementAndGet();
+                });
+        try {
+            // Create the Uni but do NOT subscribe
+            signal.send(new Ping("noop"));
+
+            Awaitility.await()
+                    .during(Duration.ofMillis(500))
+                    .atMost(Duration.ofSeconds(1))
+                    .until(() -> count.get() == 0);
+        } finally {
+            reg.unregister();
+        }
+    }
+
+    @Test
+    public void testRequestNoEmissionWithoutSubscription() {
+        AtomicInteger count = new AtomicInteger();
+
+        var reg = receivers.newReceiver(Ping.class)
+                .setResponseType(String.class)
+                .notify(ctx -> {
+                    count.incrementAndGet();
+                    return Uni.createFrom().item("reply");
+                });
+        try {
+            // Create the Uni but do NOT subscribe
+            signal.request(new Ping("noop"), String.class);
+
+            Awaitility.await()
+                    .during(Duration.ofMillis(500))
+                    .atMost(Duration.ofSeconds(1))
+                    .until(() -> count.get() == 0);
         } finally {
             reg.unregister();
         }
