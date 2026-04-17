@@ -5,6 +5,7 @@ import static io.quarkus.deployment.annotations.ExecutionTime.RUNTIME_INIT;
 import java.lang.reflect.Modifier;
 import java.lang.reflect.Type;
 import java.util.ArrayList;
+import java.util.EnumSet;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
@@ -30,7 +31,7 @@ import org.jboss.jandex.gizmo2.Jandex2Gizmo;
 
 import io.quarkiverse.signals.Receiver.ExecutionModel;
 import io.quarkiverse.signals.Signal;
-import io.quarkiverse.signals.runtime.DefaultReceiverExecutor;
+import io.quarkiverse.signals.runtime.DefaultBlockingReceiverExecutor;
 import io.quarkiverse.signals.runtime.InvokerReceiver;
 import io.quarkiverse.signals.runtime.InvokerReceiver.ReceiveInfo;
 import io.quarkiverse.signals.runtime.ReceiverManager;
@@ -38,6 +39,7 @@ import io.quarkiverse.signals.runtime.SignalBeanCreator;
 import io.quarkiverse.signals.runtime.SignalsRecorder;
 import io.quarkiverse.signals.runtime.SignalsRecorder.SignalsContext;
 import io.quarkiverse.signals.runtime.VertxReceiverExecutor;
+import io.quarkiverse.signals.runtime.VirtualThreadReceiverExecutor;
 import io.quarkus.arc.deployment.AdditionalBeanBuildItem;
 import io.quarkus.arc.deployment.BeanArchiveIndexBuildItem;
 import io.quarkus.arc.deployment.BeanRegistrationPhaseBuildItem;
@@ -75,7 +77,7 @@ class SignalsProcessor {
     void collectReceivers(BeanRegistrationPhaseBuildItem beanRegistration,
             InvokerFactoryBuildItem invokerFactory,
             BuildProducer<ReceiverMethodBuildItem> receivers,
-            Capabilities capabilities) {
+            SupportedExecutionModelsBuildItem supportedExecutionModels) {
 
         Set<DotName> knownQualifiers = beanRegistration.getBeanProcessor().getBeanDeployment().getQualifiers().stream()
                 .map(ci -> ci.name()).collect(Collectors.toSet());
@@ -109,10 +111,9 @@ class SignalsProcessor {
                                 "A receiver method must not be static: " + methodDesc(method));
                     }
                     ExecutionModel executionModel = getExecutionModel(method);
-                    if (executionModel == ExecutionModel.EVENT_LOOP && capabilities.isMissing(Capability.VERTX)) {
+                    if (!supportedExecutionModels.isSupported(executionModel)) {
                         throw new IllegalStateException(
-                                "The ExecutionModel.EVENT_LOOP is not supported - please add quarkus-vertx extension to your project: "
-                                        + methodDesc(method));
+                                "%s execution model is not supported: ".formatted(executionModel, methodDesc(method)));
                     }
                     InvokerBuilder invokerBuilder = invokerFactory.createInvoker(bean, method)
                             .withInstanceLookup();
@@ -288,13 +289,28 @@ class SignalsProcessor {
     }
 
     @BuildStep
-    void registerBeans(BuildProducer<AdditionalBeanBuildItem> beans, Capabilities capabilities) {
+    SupportedExecutionModelsBuildItem supportedExecutionModels(Capabilities capabilities) {
+        Set<ExecutionModel> supportedModels;
+        if (capabilities.isPresent(Capability.VERTX)) {
+            supportedModels = EnumSet.allOf(ExecutionModel.class);
+        } else {
+            // TODO quarkus-virtual-threads does not declare capability
+            supportedModels = EnumSet.of(ExecutionModel.WORKER_THREAD, ExecutionModel.VIRTUAL_THREAD);
+        }
+        return new SupportedExecutionModelsBuildItem(supportedModels);
+    }
+
+    @BuildStep
+    void registerBeans(BuildProducer<AdditionalBeanBuildItem> beans,
+            SupportedExecutionModelsBuildItem supportedExecutionModels) {
         AdditionalBeanBuildItem.Builder builder = AdditionalBeanBuildItem.builder();
         builder.addBeanClass(ReceiverManager.class);
-        if (capabilities.isPresent(Capability.VERTX)) {
+        if (supportedExecutionModels.isSupported(ExecutionModel.EVENT_LOOP)) {
             builder.addBeanClass(VertxReceiverExecutor.class);
+        } else if (supportedExecutionModels.isSupported(ExecutionModel.VIRTUAL_THREAD)) {
+            builder.addBeanClass(VirtualThreadReceiverExecutor.class);
         } else {
-            builder.addBeanClass(DefaultReceiverExecutor.class);
+            builder.addBeanClass(DefaultBlockingReceiverExecutor.class);
         }
         beans.produce(builder.build());
     }

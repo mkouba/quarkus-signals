@@ -13,28 +13,30 @@ import io.quarkiverse.signals.Receiver;
 import io.quarkiverse.signals.Receiver.ExecutionModel;
 import io.quarkiverse.signals.Receiver.SignalContext;
 import io.quarkus.arc.Arc;
+import io.quarkus.arc.DefaultBean;
 import io.quarkus.arc.ManagedContext;
-import io.quarkus.virtual.threads.VirtualThreadsRecorder;
 import io.smallrye.mutiny.Uni;
 
+@DefaultBean
 @Singleton
-public class DefaultReceiverExecutor implements ReceiverExecutor {
+public class DefaultBlockingReceiverExecutor implements ReceiverExecutor {
 
-    private static final Logger LOG = Logger.getLogger(DefaultReceiverExecutor.class);
+    private static final Logger LOG = Logger.getLogger(DefaultBlockingReceiverExecutor.class);
 
     @Inject
     ExecutorService executorService;
 
     @Override
     public boolean supportsExecutionModel(ExecutionModel val) {
-        return val == ExecutionModel.VIRTUAL_THREAD || val == ExecutionModel.WORKER_THREAD;
+        return val == ExecutionModel.WORKER_THREAD;
     }
 
     @Override
     public <SIGNAL, RESPONSE> Uni<RESPONSE> execute(Receiver<SIGNAL, RESPONSE> receiver, SignalContext<SIGNAL> context) {
         ExecutionModel executionModel = receiver.executionModel();
-        if (executionModel == ExecutionModel.EVENT_LOOP) {
-            throw new IllegalStateException("The ExecutionModel.EVENT_LOOP is not supported");
+        if (!supportsExecutionModel(executionModel)) {
+            throw new IllegalStateException(
+                    "The execution model %s of %s is not supported".formatted(executionModel, receiver));
         }
         LOG.infof("Notify %s [signal=%s, emission=%s]", receiver, context.signalType(),
                 context.emissionType());
@@ -52,29 +54,16 @@ public class DefaultReceiverExecutor implements ReceiverExecutor {
 
     protected <RESULT> CompletableFuture<RESULT> execute(ExecutionModel executionModel, Callable<Uni<RESULT>> action) {
         CompletableFuture<RESULT> ret = new CompletableFuture<>();
-        if (executionModel == ExecutionModel.VIRTUAL_THREAD) {
-            VirtualThreadsRecorder.getCurrent().execute(new Runnable() {
-                @Override
-                public void run() {
-                    try {
-                        action.call().subscribe().with(ret::complete, ret::completeExceptionally);
-                    } catch (Throwable e) {
-                        ret.completeExceptionally(e);
-                    }
+        executorService.execute(new Runnable() {
+            @Override
+            public void run() {
+                try {
+                    action.call().subscribe().with(ret::complete, ret::completeExceptionally);
+                } catch (Throwable e) {
+                    ret.completeExceptionally(e);
                 }
-            });
-        } else if (executionModel == ExecutionModel.WORKER_THREAD) {
-            executorService.execute(new Runnable() {
-                @Override
-                public void run() {
-                    try {
-                        action.call().subscribe().with(ret::complete, ret::completeExceptionally);
-                    } catch (Throwable e) {
-                        ret.completeExceptionally(e);
-                    }
-                }
-            });
-        }
+            }
+        });
         return ret;
     }
 
