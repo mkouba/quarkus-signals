@@ -103,6 +103,10 @@ public class ReceiverManager implements Receivers {
     }
 
     private Registration register(CallbackReceiver<?, ?> receiver) {
+        if (!executor.supportsExecutionModel(receiver.executionModel())) {
+            throw new IllegalStateException(
+                    "%s not supported by %s".formatted(receiver.executionModel(), executor.getClass().getName()));
+        }
         receivers.put(receiver.id(), receiver);
         invalidateCache(receiver);
         return () -> {

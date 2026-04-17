@@ -30,6 +30,7 @@ import org.jboss.jandex.gizmo2.Jandex2Gizmo;
 
 import io.quarkiverse.signals.Receiver.ExecutionModel;
 import io.quarkiverse.signals.Signal;
+import io.quarkiverse.signals.runtime.DefaultReceiverExecutor;
 import io.quarkiverse.signals.runtime.InvokerReceiver;
 import io.quarkiverse.signals.runtime.InvokerReceiver.ReceiveInfo;
 import io.quarkiverse.signals.runtime.ReceiverManager;
@@ -47,6 +48,8 @@ import io.quarkus.arc.processor.BeanInfo;
 import io.quarkus.arc.processor.InjectionPointInfo;
 import io.quarkus.arc.processor.InvokerBuilder;
 import io.quarkus.arc.processor.RuntimeTypeCreator;
+import io.quarkus.deployment.Capabilities;
+import io.quarkus.deployment.Capability;
 import io.quarkus.deployment.GeneratedClassGizmo2Adaptor;
 import io.quarkus.deployment.annotations.BuildProducer;
 import io.quarkus.deployment.annotations.BuildStep;
@@ -71,7 +74,8 @@ class SignalsProcessor {
     @BuildStep
     void collectReceivers(BeanRegistrationPhaseBuildItem beanRegistration,
             InvokerFactoryBuildItem invokerFactory,
-            BuildProducer<ReceiverMethodBuildItem> receivers) {
+            BuildProducer<ReceiverMethodBuildItem> receivers,
+            Capabilities capabilities) {
 
         Set<DotName> knownQualifiers = beanRegistration.getBeanProcessor().getBeanDeployment().getQualifiers().stream()
                 .map(ci -> ci.name()).collect(Collectors.toSet());
@@ -105,6 +109,11 @@ class SignalsProcessor {
                                 "A receiver method must not be static: " + methodDesc(method));
                     }
                     ExecutionModel executionModel = getExecutionModel(method);
+                    if (executionModel == ExecutionModel.EVENT_LOOP && capabilities.isMissing(Capability.VERTX)) {
+                        throw new IllegalStateException(
+                                "The ExecutionModel.EVENT_LOOP is not supported - please add quarkus-vertx extension to your project: "
+                                        + methodDesc(method));
+                    }
                     InvokerBuilder invokerBuilder = invokerFactory.createInvoker(bean, method)
                             .withInstanceLookup();
                     if (params.size() > 1) {
@@ -279,10 +288,15 @@ class SignalsProcessor {
     }
 
     @BuildStep
-    void registerBeans(BuildProducer<AdditionalBeanBuildItem> beans) {
-        beans.produce(AdditionalBeanBuildItem.builder()
-                .addBeanClasses(ReceiverManager.class, VertxReceiverExecutor.class)
-                .build());
+    void registerBeans(BuildProducer<AdditionalBeanBuildItem> beans, Capabilities capabilities) {
+        AdditionalBeanBuildItem.Builder builder = AdditionalBeanBuildItem.builder();
+        builder.addBeanClass(ReceiverManager.class);
+        if (capabilities.isPresent(Capability.VERTX)) {
+            builder.addBeanClass(VertxReceiverExecutor.class);
+        } else {
+            builder.addBeanClass(DefaultReceiverExecutor.class);
+        }
+        beans.produce(builder.build());
     }
 
     private static ExecutionModel getExecutionModel(MethodInfo method) {

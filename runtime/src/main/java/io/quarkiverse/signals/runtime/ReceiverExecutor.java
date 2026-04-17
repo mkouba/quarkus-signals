@@ -1,6 +1,7 @@
 package io.quarkiverse.signals.runtime;
 
 import io.quarkiverse.signals.Receiver;
+import io.quarkiverse.signals.Receiver.ExecutionModel;
 import io.quarkiverse.signals.Receiver.SignalContext;
 import io.smallrye.mutiny.Uni;
 
@@ -14,6 +15,12 @@ import io.smallrye.mutiny.Uni;
  * @see Receiver.ExecutionModel
  */
 public interface ReceiverExecutor {
+
+    /**
+     * @param val
+     * @return {@code true} if the specified execution model is supported, {@code false} otherwise
+     */
+    boolean supportsExecutionModel(ExecutionModel val);
 
     /**
      * Executes the given receiver with the provided signal context.

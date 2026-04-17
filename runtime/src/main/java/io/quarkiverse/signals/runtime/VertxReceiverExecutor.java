@@ -31,43 +31,44 @@ public class VertxReceiverExecutor implements ReceiverExecutor {
     Vertx vertx;
 
     @Override
+    public boolean supportsExecutionModel(ExecutionModel val) {
+        return true;
+    }
+
+    @Override
     public <SIGNAL, RESPONSE> Uni<RESPONSE> execute(Receiver<SIGNAL, RESPONSE> receiver, SignalContext<SIGNAL> signalContext) {
         LOG.infof("Notify %s [signal=%s, emission=%s]", receiver, signalContext.signalType(),
                 signalContext.emissionType());
         Context context = VertxContext.createNewDuplicatedContext(vertx.getOrCreateContext());
         VertxContextSafetyToggle.setContextSafe(context, true);
-        Promise<RESPONSE> ret = Promise.promise();
+        Promise<RESPONSE> promise = Promise.promise();
+        Future<RESPONSE> future = promise.future();
         context.runOnContext(v -> {
             // Activate new request context
             ManagedContext requestContext = Arc.container().requestContext();
             requestContext.activate();
-            execute(receiver.executionModel(), new Callable<Uni<RESPONSE>>() {
+            execute(promise, receiver.executionModel(), new Callable<Uni<RESPONSE>>() {
                 @Override
                 public Uni<RESPONSE> call() throws Exception {
                     return receiver.notify(signalContext);
                 }
-            }).onComplete(r -> {
-                if (r.failed()) {
-                    ret.fail(r.cause());
-                } else {
-                    ret.complete(r.result());
-                }
+            });
+            future.onComplete(r -> {
                 requestContext.terminate();
             });
         });
-        return UniHelper.toUni(ret.future());
+        return UniHelper.toUni(future);
     }
 
-    protected <RESULT> Future<RESULT> execute(ExecutionModel executionModel, Callable<Uni<RESULT>> action) {
-        Promise<RESULT> ret = Promise.promise();
+    protected <RESULT> void execute(Promise<RESULT> result, ExecutionModel executionModel, Callable<Uni<RESULT>> action) {
         if (executionModel == ExecutionModel.VIRTUAL_THREAD) {
             VirtualThreadsRecorder.getCurrent().execute(new Runnable() {
                 @Override
                 public void run() {
                     try {
-                        action.call().subscribe().with(ret::complete, ret::fail);
+                        action.call().subscribe().with(result::complete, result::fail);
                     } catch (Throwable e) {
-                        ret.fail(e);
+                        result.fail(e);
                     }
                 }
             });
@@ -76,21 +77,20 @@ public class VertxReceiverExecutor implements ReceiverExecutor {
                 @Override
                 public Void call() {
                     try {
-                        action.call().subscribe().with(ret::complete, ret::fail);
+                        action.call().subscribe().with(result::complete, result::fail);
                     } catch (Throwable e) {
-                        ret.fail(e);
+                        result.fail(e);
                     }
                     return null;
                 }
             }, false);
         } else {
             try {
-                action.call().subscribe().with(ret::complete, ret::fail);
+                action.call().subscribe().with(result::complete, result::fail);
             } catch (Throwable e) {
-                ret.fail(e);
+                result.fail(e);
             }
         }
-        return ret.future();
     }
 
 }
