@@ -295,7 +295,7 @@ class SignalsProcessor {
             supportedModels = EnumSet.allOf(ExecutionModel.class);
         } else {
             // TODO quarkus-virtual-threads does not declare capability
-            supportedModels = EnumSet.of(ExecutionModel.WORKER_THREAD, ExecutionModel.VIRTUAL_THREAD);
+            supportedModels = EnumSet.of(ExecutionModel.BLOCKING, ExecutionModel.VIRTUAL_THREAD);
         }
         return new SupportedExecutionModelsBuildItem(supportedModels);
     }
@@ -305,7 +305,7 @@ class SignalsProcessor {
             SupportedExecutionModelsBuildItem supportedExecutionModels) {
         AdditionalBeanBuildItem.Builder builder = AdditionalBeanBuildItem.builder();
         builder.addBeanClass(ReceiverManager.class);
-        if (supportedExecutionModels.isSupported(ExecutionModel.EVENT_LOOP)) {
+        if (supportedExecutionModels.isSupported(ExecutionModel.NON_BLOCKING)) {
             builder.addBeanClass(VertxReceiverExecutor.class);
         } else if (supportedExecutionModels.isSupported(ExecutionModel.VIRTUAL_THREAD)) {
             builder.addBeanClass(VirtualThreadReceiverExecutor.class);
@@ -319,19 +319,19 @@ class SignalsProcessor {
         if (method.hasDeclaredAnnotation(DotNames.RUN_ON_VIRTUAL_THREAD)) {
             return ExecutionModel.VIRTUAL_THREAD;
         } else if (method.hasDeclaredAnnotation(DotNames.BLOCKING)) {
-            return ExecutionModel.WORKER_THREAD;
+            return ExecutionModel.BLOCKING;
         } else if (method.hasDeclaredAnnotation(DotNames.NON_BLOCKING)) {
-            return ExecutionModel.EVENT_LOOP;
+            return ExecutionModel.NON_BLOCKING;
         } else {
             // Now test class-level annotations
             if (method.declaringClass().hasDeclaredAnnotation(DotNames.RUN_ON_VIRTUAL_THREAD)) {
                 return ExecutionModel.VIRTUAL_THREAD;
             } else if (method.declaringClass().hasDeclaredAnnotation(DotNames.BLOCKING)) {
-                return ExecutionModel.WORKER_THREAD;
+                return ExecutionModel.BLOCKING;
             } else if (method.declaringClass().hasDeclaredAnnotation(DotNames.NON_BLOCKING)) {
-                return ExecutionModel.EVENT_LOOP;
+                return ExecutionModel.NON_BLOCKING;
             }
-            return hasBlockingSignature(method) ? ExecutionModel.WORKER_THREAD : ExecutionModel.EVENT_LOOP;
+            return hasBlockingSignature(method) ? ExecutionModel.BLOCKING : ExecutionModel.NON_BLOCKING;
         }
     }
 

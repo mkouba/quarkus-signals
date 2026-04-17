@@ -28,7 +28,7 @@ public class DefaultBlockingReceiverExecutor implements ReceiverExecutor {
 
     @Override
     public boolean supportsExecutionModel(ExecutionModel val) {
-        return val == ExecutionModel.WORKER_THREAD;
+        return val == ExecutionModel.BLOCKING;
     }
 
     @Override

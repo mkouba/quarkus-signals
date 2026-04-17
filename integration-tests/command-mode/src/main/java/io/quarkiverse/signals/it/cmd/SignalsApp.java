@@ -75,7 +75,7 @@ public class SignalsApp implements QuarkusApplication {
         final AtomicInteger blockingCount = new AtomicInteger();
         final AtomicInteger virtualCount = new AtomicInteger();
 
-        // Blocking signature → WORKER_THREAD
+        // Blocking signature → BLOCKING
         String toUpperCase(@Receives Cmd cmd) {
             blockingCount.incrementAndGet();
             return cmd.value().toUpperCase();

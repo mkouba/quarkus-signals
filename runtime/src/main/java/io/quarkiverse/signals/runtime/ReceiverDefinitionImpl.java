@@ -26,7 +26,7 @@ class ReceiverDefinitionImpl<SIGNAL, RESPONSE> implements Receivers.ReceiverDefi
     private final Type signalType;
     private Type responseType;
     private Set<Annotation> qualifiers = Set.of();
-    private ExecutionModel executionModel = ExecutionModel.WORKER_THREAD;
+    private ExecutionModel executionModel = ExecutionModel.BLOCKING;
 
     public ReceiverDefinitionImpl(Type signalType, BeanContainer beanContainer,
             Function<CallbackReceiver<SIGNAL, RESPONSE>, Receivers.Registration> registerFun) {

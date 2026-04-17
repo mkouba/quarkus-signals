@@ -54,7 +54,7 @@ public class RequestAndAwaitTest {
     @Singleton
     public static class MyReceivers {
 
-        // Blocking signature → WORKER_THREAD
+        // Blocking signature → BLOCKING
         String toUpperCase(@Receives Cmd cmd) {
             if ("fail".equals(cmd.value())) {
                 throw new IllegalStateException("boom");
@@ -62,7 +62,7 @@ public class RequestAndAwaitTest {
             return cmd.value().toUpperCase();
         }
 
-        // Reactive → EVENT_LOOP
+        // Reactive → NON_BLOCKING
         Uni<Integer> toLength(@Receives Cmd cmd) {
             return Uni.createFrom().item(cmd.value().length());
         }

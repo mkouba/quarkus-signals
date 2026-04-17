@@ -19,7 +19,7 @@ public class VirtualThreadReceiverExecutor extends DefaultBlockingReceiverExecut
 
     @Override
     public boolean supportsExecutionModel(ExecutionModel val) {
-        return val == ExecutionModel.VIRTUAL_THREAD || val == ExecutionModel.WORKER_THREAD;
+        return val == ExecutionModel.VIRTUAL_THREAD || val == ExecutionModel.BLOCKING;
     }
 
     protected <RESULT> CompletableFuture<RESULT> execute(ExecutionModel executionModel, Callable<Uni<RESULT>> action) {

@@ -127,10 +127,10 @@ public interface Receiver<SIGNAL, RESPONSE> {
     enum ExecutionModel {
 
         /**
-         * The receiver is executed on a worker thread. This is the default for receiver methods with a blocking
-         * signature (i.e., not returning {@link Uni}).
+         * The receiver performs blocking operations and is offloaded to a worker thread.
+         * This is the default for receiver methods with a blocking signature (i.e., not returning {@link Uni}).
          */
-        WORKER_THREAD,
+        BLOCKING,
 
         /**
          * The receiver is executed on a virtual thread.
@@ -138,10 +138,10 @@ public interface Receiver<SIGNAL, RESPONSE> {
         VIRTUAL_THREAD,
 
         /**
-         * The receiver is executed on the Vert.x event loop. This is the default for receiver methods returning
-         * {@link Uni}.
+         * The receiver performs non-blocking operations. When Vert.x is available, it is executed on the event loop.
+         * This is the default for receiver methods returning {@link Uni}.
          */
-        EVENT_LOOP
+        NON_BLOCKING
 
     }
 

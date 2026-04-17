@@ -133,12 +133,12 @@ public class RequestScopeIsolationTest {
     @Singleton
     public static class MyReceivers {
 
-        // Blocking signature (returns int) → WORKER_THREAD
+        // Blocking signature (returns int) → BLOCKING
         int blocking(@Receives BlockingCmd cmd, IdentityService identityService) {
             return identityService.getId();
         }
 
-        // Uni return type → EVENT_LOOP
+        // Uni return type → NON_BLOCKING
         Uni<Integer> reactive(@Receives ReactiveCmd cmd, IdentityService identityService) {
             return Uni.createFrom().item(identityService.getId());
         }

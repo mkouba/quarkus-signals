@@ -72,7 +72,7 @@ public class VertxReceiverExecutor implements ReceiverExecutor {
                     }
                 }
             });
-        } else if (executionModel == ExecutionModel.WORKER_THREAD) {
+        } else if (executionModel == ExecutionModel.BLOCKING) {
             vertx.executeBlocking(new Callable<Void>() {
                 @Override
                 public Void call() {

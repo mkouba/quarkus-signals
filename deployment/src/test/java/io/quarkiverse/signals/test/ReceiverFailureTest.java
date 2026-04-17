@@ -54,7 +54,7 @@ public class ReceiverFailureTest {
     @Test
     public void testPublishFailureWorkerThread() {
         var reg = receivers.newReceiver(Cmd.class)
-                .setExecutionModel(ExecutionModel.WORKER_THREAD)
+                .setExecutionModel(ExecutionModel.BLOCKING)
                 .notify(new Consumer<SignalContext<Cmd>>() {
 
                     @Override
@@ -98,7 +98,7 @@ public class ReceiverFailureTest {
     @Test
     public void testPublishFailureEventLoop() {
         var reg = receivers.newReceiver(Cmd.class)
-                .setExecutionModel(ExecutionModel.EVENT_LOOP)
+                .setExecutionModel(ExecutionModel.NON_BLOCKING)
                 .notify(new Consumer<SignalContext<Cmd>>() {
 
                     @Override
@@ -120,7 +120,7 @@ public class ReceiverFailureTest {
     @Test
     public void testSendFailureWorkerThread() {
         var reg = receivers.newReceiver(Cmd.class)
-                .setExecutionModel(ExecutionModel.WORKER_THREAD)
+                .setExecutionModel(ExecutionModel.BLOCKING)
                 .notify(new Consumer<SignalContext<Cmd>>() {
 
                     @Override
@@ -162,7 +162,7 @@ public class ReceiverFailureTest {
     @Test
     public void testSendFailureEventLoop() {
         var reg = receivers.newReceiver(Cmd.class)
-                .setExecutionModel(ExecutionModel.EVENT_LOOP)
+                .setExecutionModel(ExecutionModel.NON_BLOCKING)
                 .notify(new Consumer<SignalContext<Cmd>>() {
 
                     @Override
@@ -184,7 +184,7 @@ public class ReceiverFailureTest {
     public void testRequestFailureWorkerThread() {
         var reg = receivers.newReceiver(Cmd.class)
                 .setResponseType(String.class)
-                .setExecutionModel(ExecutionModel.WORKER_THREAD)
+                .setExecutionModel(ExecutionModel.BLOCKING)
                 .notify(new Function<SignalContext<Cmd>, Uni<String>>() {
 
                     @Override
@@ -228,7 +228,7 @@ public class ReceiverFailureTest {
     public void testRequestFailureEventLoop() {
         var reg = receivers.newReceiver(Cmd.class)
                 .setResponseType(String.class)
-                .setExecutionModel(ExecutionModel.EVENT_LOOP)
+                .setExecutionModel(ExecutionModel.NON_BLOCKING)
                 .notify(new Function<SignalContext<Cmd>, Uni<String>>() {
 
                     @Override
