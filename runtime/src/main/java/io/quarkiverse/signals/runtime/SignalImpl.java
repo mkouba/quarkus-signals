@@ -18,6 +18,7 @@ import io.quarkiverse.signals.Receiver;
 import io.quarkiverse.signals.Receiver.EmissionType;
 import io.quarkiverse.signals.Receiver.SignalContext;
 import io.quarkiverse.signals.Signal;
+import io.quarkiverse.signals.spi.SignalMetadataEnricher;
 import io.smallrye.mutiny.Uni;
 
 public class SignalImpl<T> implements Signal<T> {
@@ -87,11 +88,11 @@ public class SignalImpl<T> implements Signal<T> {
         if (receivers.isEmpty()) {
             return Uni.createFrom().voidItem();
         }
-        var signalContext = new SignalContextImpl<>(signal, metadata, EmissionType.PUBLISH);
         return Uni.createFrom().deferred(() -> {
+            var signalContext = enrich(signal, EmissionType.PUBLISH, null);
             List<Uni<Object>> unis = new ArrayList<>(receivers.size());
             for (Receiver<?, ?> receiver : receivers) {
-                unis.add(manager.receiverExecutor().execute(cast(receiver), signalContext));
+                unis.add(manager.executeReceiver(cast(receiver), signalContext));
             }
             return Uni.join().all(unis).andCollectFailures().replaceWithVoid();
         });
@@ -110,8 +111,10 @@ public class SignalImpl<T> implements Signal<T> {
     private <R> Uni<R> request(T signal, Type responseType) {
         var receiver = manager.nextReceiver(signalType, qualifiers, responseType);
         if (receiver != null) {
-            var signalContext = new SignalContextImpl<>(signal, metadata, EmissionType.REQUEST, responseType);
-            return Uni.createFrom().deferred(() -> cast(manager.receiverExecutor().execute(cast(receiver), signalContext)));
+            return Uni.createFrom().deferred(() -> {
+                var signalContext = enrich(signal, EmissionType.REQUEST, responseType);
+                return cast(manager.executeReceiver(cast(receiver), signalContext));
+            });
         } else {
             return Uni.createFrom().nullItem();
         }
@@ -126,13 +129,11 @@ public class SignalImpl<T> implements Signal<T> {
     public Uni<Void> send(T signal) {
         var receiver = manager.nextReceiver(signalType, qualifiers, null);
         if (receiver != null) {
-            var signalContext = new SignalContextImpl<>(signal, metadata, EmissionType.SEND);
             return Uni.createFrom().deferred(() -> {
-                return manager.receiverExecutor()
-                        .execute(cast(receiver), signalContext)
+                var signalContext = enrich(signal, EmissionType.SEND, null);
+                return manager.executeReceiver(cast(receiver), signalContext)
                         .replaceWithVoid();
             });
-
         } else {
             return Uni.createFrom().voidItem();
         }
@@ -146,9 +147,44 @@ public class SignalImpl<T> implements Signal<T> {
         }
     };
 
+    private <SIGNAL> SignalContextImpl<SIGNAL> enrich(SIGNAL signal, EmissionType emissionType, Type responseType) {
+        List<SignalMetadataEnricher> enrichers = manager.enrichers();
+        if (enrichers.isEmpty()) {
+            return new SignalContextImpl<>(signal, metadata, emissionType, responseType);
+        }
+        Map<String, Object> mutableMeta = metadata.isEmpty() ? new HashMap<>() : new HashMap<>(metadata);
+        SignalContextImpl<SIGNAL> signalContext = new SignalContextImpl<>(signal, mutableMeta, emissionType, responseType);
+        EnrichmentContextImpl enrichmentContext = new EnrichmentContextImpl(signalContext, mutableMeta);
+        for (SignalMetadataEnricher enricher : enrichers) {
+            enricher.enrich(enrichmentContext);
+        }
+        return new SignalContextImpl<>(signal, Map.copyOf(mutableMeta), emissionType, responseType);
+    }
+
     @SuppressWarnings("unchecked")
     private static <T> T cast(Object obj) {
         return (T) obj;
+    }
+
+    static class EnrichmentContextImpl implements SignalMetadataEnricher.EnrichmentContext {
+
+        private final SignalContext<?> signalContext;
+        private final Map<String, Object> mutableMetadata;
+
+        EnrichmentContextImpl(SignalContext<?> signalContext, Map<String, Object> mutableMetadata) {
+            this.signalContext = signalContext;
+            this.mutableMetadata = mutableMetadata;
+        }
+
+        @Override
+        public SignalContext<?> signalContext() {
+            return signalContext;
+        }
+
+        @Override
+        public void putMetadata(String key, Object value) {
+            mutableMetadata.put(key, value);
+        }
     }
 
     class SignalContextImpl<SIGNAL> implements SignalContext<SIGNAL> {
@@ -157,10 +193,6 @@ public class SignalImpl<T> implements Signal<T> {
         private final Map<String, Object> meta;
         private final EmissionType emissionType;
         private final Type responseType;
-
-        SignalContextImpl(SIGNAL signal, Map<String, Object> meta, EmissionType emissionType) {
-            this(signal, meta, emissionType, null);
-        }
 
         SignalContextImpl(SIGNAL signal, Map<String, Object> meta, EmissionType emissionType, Type responseType) {
             this.signal = signal;

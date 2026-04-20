@@ -8,25 +8,18 @@ import io.quarkus.runtime.annotations.Recorder;
 @Recorder
 public class SignalsRecorder {
 
-    public Supplier<Object> createContext(List<String> receiversClasses) {
+    public Supplier<Object> createContext(List<String> receiversClasses, List<String> orderedEnricherIds,
+            List<String> orderedInterceptorIds) {
         return new Supplier<Object>() {
 
             @Override
             public Object get() {
-                return new SignalsContext() {
-
-                    @Override
-                    public List<String> receiversClasses() {
-                        return receiversClasses;
-                    }
-                };
+                return new SignalsContext(receiversClasses, orderedEnricherIds, orderedInterceptorIds);
             }
         };
     }
 
-    public interface SignalsContext {
-
-        List<String> receiversClasses();
-
+    public record SignalsContext(List<String> receiversClasses, List<String> orderedEnricherIds,
+            List<String> orderedInterceptorIds) {
     }
 }

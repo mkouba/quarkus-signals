@@ -80,7 +80,7 @@ public interface Receiver<SIGNAL, RESPONSE> {
     Uni<RESPONSE> notify(SignalContext<SIGNAL> context);
 
     /**
-     * Provides contextual information about an emitted signal, passed to {@link Receiver#notify(SignalContext)}.
+     * Immutable contextual information about an emitted signal, passed to {@link Receiver#notify(SignalContext)}.
      *
      * @param <T> the signal type
      */
