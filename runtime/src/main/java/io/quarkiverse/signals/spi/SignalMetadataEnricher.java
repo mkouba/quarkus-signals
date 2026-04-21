@@ -34,10 +34,11 @@ public interface SignalMetadataEnricher {
         SignalContext<?> signalContext();
 
         /**
-         * Puts a metadata entry. If an entry with the same key already exists, it is replaced.
+         * Puts a metadata entry.
          *
          * @param key the metadata key
          * @param value the metadata value
+         * @throws IllegalArgumentException if a metadata entry with the given key already exists
          */
         void putMetadata(String key, Object value);
 

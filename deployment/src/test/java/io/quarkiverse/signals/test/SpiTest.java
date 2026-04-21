@@ -2,6 +2,7 @@ package io.quarkiverse.signals.test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.time.Duration;
@@ -71,20 +72,35 @@ public class SpiTest {
         assertTrue(ctx.metadata().get("correlationId").toString().startsWith("corr-"));
     }
 
+    @Inject
+    @Any
+    TimestampEnricher timestampEnricher;
+
     @Test
     public void testEnricherOrdering() {
         // CorrelationIdEnricher runs before TimestampEnricher (@ComponentOrder)
-        // CorrelationIdEnricher uses the timestamp key to verify ordering
+        // TimestampEnricher sees correlationId in signal context because a new
+        // SignalContext is created after each enricher run
         receivers.receivedContexts.clear();
 
         signal.request(new Cmd("order"), String.class)
                 .ifNoItem().after(Duration.ofSeconds(5)).fail()
                 .await().indefinitely();
 
-        SignalContext<?> ctx = receivers.receivedContexts.get(0);
-        // CorrelationIdEnricher runs first, sets "enrichOrder" to "correlation"
-        // TimestampEnricher runs second, appends ",timestamp"
-        assertEquals("correlation,timestamp", ctx.metadata().get("enrichOrder"));
+        assertTrue(timestampEnricher.correlationIdPresentAtEnrichTime,
+                "TimestampEnricher must see correlationId set by the earlier CorrelationIdEnricher");
+    }
+
+    @Test
+    public void testEnricherPutMetadataThrowsOnDuplicateKey() {
+        // Signal already has "correlationId" in metadata — enricher tries to put the same key
+        IllegalArgumentException e = assertThrows(IllegalArgumentException.class, () -> {
+            signal.putMetadata("correlationId", "existing")
+                    .request(new Cmd("dup"), String.class)
+                    .ifNoItem().after(Duration.ofSeconds(5)).fail()
+                    .await().indefinitely();
+        });
+        assertTrue(e.getMessage().contains("correlationId"));
     }
 
     @Test
@@ -171,7 +187,6 @@ public class SpiTest {
         @Override
         public void enrich(EnrichmentContext context) {
             context.putMetadata("correlationId", "corr-" + System.nanoTime());
-            context.putMetadata("enrichOrder", "correlation");
         }
     }
 
@@ -179,13 +194,12 @@ public class SpiTest {
     @Singleton
     public static class TimestampEnricher implements SignalMetadataEnricher {
 
+        boolean correlationIdPresentAtEnrichTime;
+
         @Override
         public void enrich(EnrichmentContext context) {
             context.putMetadata("timestamp", System.currentTimeMillis());
-            String order = (String) context.signalContext().metadata().get("enrichOrder");
-            if (order != null) {
-                context.putMetadata("enrichOrder", order + ",timestamp");
-            }
+            correlationIdPresentAtEnrichTime = context.signalContext().metadata().containsKey("correlationId");
         }
     }
 

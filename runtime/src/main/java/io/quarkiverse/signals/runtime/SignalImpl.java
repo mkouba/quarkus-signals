@@ -152,13 +152,18 @@ public class SignalImpl<T> implements Signal<T> {
         if (enrichers.isEmpty()) {
             return new SignalContextImpl<>(signal, metadata, emissionType, responseType);
         }
-        Map<String, Object> mutableMeta = metadata.isEmpty() ? new HashMap<>() : new HashMap<>(metadata);
-        SignalContextImpl<SIGNAL> signalContext = new SignalContextImpl<>(signal, mutableMeta, emissionType, responseType);
-        EnrichmentContextImpl enrichmentContext = new EnrichmentContextImpl(signalContext, mutableMeta);
+        SignalContextImpl<SIGNAL> signalContext = new SignalContextImpl<>(signal, metadata, emissionType, responseType);
         for (SignalMetadataEnricher enricher : enrichers) {
+            EnrichmentContextImpl enrichmentContext = new EnrichmentContextImpl(signalContext);
             enricher.enrich(enrichmentContext);
+            Map<String, Object> additions = enrichmentContext.additions();
+            if (!additions.isEmpty()) {
+                Map<String, Object> merged = new HashMap<>(signalContext.metadata());
+                merged.putAll(additions);
+                signalContext = new SignalContextImpl<>(signal, Map.copyOf(merged), emissionType, responseType);
+            }
         }
-        return new SignalContextImpl<>(signal, Map.copyOf(mutableMeta), emissionType, responseType);
+        return signalContext;
     }
 
     @SuppressWarnings("unchecked")
@@ -169,11 +174,10 @@ public class SignalImpl<T> implements Signal<T> {
     static class EnrichmentContextImpl implements SignalMetadataEnricher.EnrichmentContext {
 
         private final SignalContext<?> signalContext;
-        private final Map<String, Object> mutableMetadata;
+        private Map<String, Object> additions;
 
-        EnrichmentContextImpl(SignalContext<?> signalContext, Map<String, Object> mutableMetadata) {
+        EnrichmentContextImpl(SignalContext<?> signalContext) {
             this.signalContext = signalContext;
-            this.mutableMetadata = mutableMetadata;
         }
 
         @Override
@@ -183,7 +187,19 @@ public class SignalImpl<T> implements Signal<T> {
 
         @Override
         public void putMetadata(String key, Object value) {
-            mutableMetadata.put(key, value);
+            if (signalContext.metadata().containsKey(key)) {
+                throw new IllegalArgumentException("Metadata key already exists: " + key);
+            }
+            if (additions == null) {
+                additions = new HashMap<>();
+            }
+            if (additions.putIfAbsent(key, value) != null) {
+                throw new IllegalArgumentException("Metadata key already exists: " + key);
+            }
+        }
+
+        Map<String, Object> additions() {
+            return additions != null ? additions : Map.of();
         }
     }
 
