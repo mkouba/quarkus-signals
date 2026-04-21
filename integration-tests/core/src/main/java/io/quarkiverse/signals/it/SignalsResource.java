@@ -20,6 +20,6 @@ public class SignalsResource {
     @GET
     @Path("{name}")
     public Uni<String> hello(@RestPath String name) {
-        return signal.request(name, String.class);
+        return signal.requestUni(name, String.class);
     }
 }

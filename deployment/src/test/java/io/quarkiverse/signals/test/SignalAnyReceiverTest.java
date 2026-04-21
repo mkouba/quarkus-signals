@@ -46,7 +46,7 @@ public class SignalAnyReceiverTest {
         receivers.sequence.clear();
 
         // Emit an unqualified signal
-        item.publishAndForget(new Item("plain"));
+        item.publish(new Item("plain"));
         Awaitility.await().until(() -> receivers.sequence.size() >= 1);
         assertEquals(1, receivers.sequence.size());
         assertEquals("any_plain", receivers.sequence.get(0));
@@ -54,7 +54,7 @@ public class SignalAnyReceiverTest {
         receivers.sequence.clear();
 
         // Emit a qualified signal — the @Any receiver should still be notified
-        item.select(Important.Literal.INSTANCE).publishAndForget(new Item("vip"));
+        item.select(Important.Literal.INSTANCE).publish(new Item("vip"));
         Awaitility.await().until(() -> receivers.sequence.size() >= 1);
         assertEquals(1, receivers.sequence.size());
         assertEquals("any_vip", receivers.sequence.get(0));

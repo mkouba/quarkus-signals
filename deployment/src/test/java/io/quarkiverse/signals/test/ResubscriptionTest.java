@@ -20,7 +20,7 @@ import io.smallrye.mutiny.Uni;
 
 /**
  * Verifies that the {@link Uni} returned by the reactive emission methods
- * ({@link Signal#publish(Object)}, {@link Signal#send(Object)}, {@link Signal#request(Object, Class)})
+ * ({@link Signal#publishUni(Object)}, {@link Signal#sendUni(Object)}, {@link Signal#requestUni(Object, Class)})
  * is lazy: no signal is emitted until the {@link Uni} is subscribed, and each subscription
  * triggers a new, independent signal emission.
  */
@@ -45,7 +45,7 @@ public class ResubscriptionTest {
                     received.add(ctx.signal().id());
                 });
         try {
-            Uni<Void> uni = signal.publish(new Ping("p"));
+            Uni<Void> uni = signal.publishUni(new Ping("p"));
 
             // First subscription
             uni.ifNoItem().after(Duration.ofSeconds(5)).fail()
@@ -70,7 +70,7 @@ public class ResubscriptionTest {
                     count.incrementAndGet();
                 });
         try {
-            Uni<Void> uni = signal.send(new Ping("s"));
+            Uni<Void> uni = signal.sendUni(new Ping("s"));
 
             // First subscription
             uni.ifNoItem().after(Duration.ofSeconds(5)).fail()
@@ -96,7 +96,7 @@ public class ResubscriptionTest {
                     return Uni.createFrom().item("reply_" + count.incrementAndGet());
                 });
         try {
-            Uni<String> uni = signal.request(new Ping("r"), String.class);
+            Uni<String> uni = signal.requestUni(new Ping("r"), String.class);
 
             // First subscription
             String first = uni.ifNoItem().after(Duration.ofSeconds(5)).fail()
@@ -122,7 +122,7 @@ public class ResubscriptionTest {
                 });
         try {
             // Create the Uni but do NOT subscribe
-            signal.publish(new Ping("noop"));
+            signal.publishUni(new Ping("noop"));
 
             Awaitility.await()
                     .during(Duration.ofMillis(500))
@@ -143,7 +143,7 @@ public class ResubscriptionTest {
                 });
         try {
             // Create the Uni but do NOT subscribe
-            signal.send(new Ping("noop"));
+            signal.sendUni(new Ping("noop"));
 
             Awaitility.await()
                     .during(Duration.ofMillis(500))
@@ -166,7 +166,7 @@ public class ResubscriptionTest {
                 });
         try {
             // Create the Uni but do NOT subscribe
-            signal.request(new Ping("noop"), String.class);
+            signal.requestUni(new Ping("noop"), String.class);
 
             Awaitility.await()
                     .during(Duration.ofMillis(500))

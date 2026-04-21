@@ -27,19 +27,19 @@ public class SignalNoReceiverTest {
     @Test
     public void testPublishNoReceiver() {
         // Should not throw
-        orphan.publishAndForget(new Orphan("nobody"));
+        orphan.publish(new Orphan("nobody"));
     }
 
     @Test
     public void testSendNoReceiver() {
         // Should not throw
-        orphan.sendAndForget(new Orphan("nobody"));
+        orphan.send(new Orphan("nobody"));
     }
 
     @Test
     public void testRequestNoReceiver() {
         // Should return null when no receiver matches
-        String result = orphan.request(new Orphan("nobody"), String.class)
+        String result = orphan.requestUni(new Orphan("nobody"), String.class)
                 .ifNoItem()
                 .after(Duration.ofSeconds(1))
                 .fail()

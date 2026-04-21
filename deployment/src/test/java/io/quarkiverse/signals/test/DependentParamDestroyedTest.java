@@ -40,14 +40,14 @@ public class DependentParamDestroyedTest {
     @Test
     public void testReceiverDestroysDependent() {
         DependentService.EVENTS.clear();
-        cmd1.sendAndForget(new Cmd1("blocking"));
+        cmd1.send(new Cmd1("blocking"));
         Awaitility.await().until(() -> DependentService.EVENTS.contains("destroyed"));
         assertEquals(2, DependentService.EVENTS.size());
         assertEquals("created", DependentService.EVENTS.get(0));
         assertEquals("destroyed", DependentService.EVENTS.get(1));
 
         DependentService.EVENTS.clear();
-        String result = cmd2.request(new Cmd2("reactive"), String.class)
+        String result = cmd2.requestUni(new Cmd2("reactive"), String.class)
                 .ifNoItem()
                 .after(Duration.ofSeconds(1))
                 .fail()

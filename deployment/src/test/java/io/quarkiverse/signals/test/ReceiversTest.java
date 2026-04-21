@@ -59,7 +59,7 @@ public class ReceiversTest {
                 });
 
         // Emit — the registered receiver should be invoked
-        order.publishAndForget(new Order("1"));
+        order.publish(new Order("1"));
         Awaitility.await().until(() -> received.size() >= 1);
         assertEquals(1, received.size());
         assertEquals("listener_1", received.get(0));
@@ -69,7 +69,7 @@ public class ReceiversTest {
         received.clear();
 
         // Emit again — the receiver should no longer be invoked
-        order.publishAndForget(new Order("2"));
+        order.publish(new Order("2"));
         // Give some time for potential (unwanted) delivery
         try {
             Thread.sleep(500);
@@ -87,7 +87,7 @@ public class ReceiversTest {
                     return Uni.createFrom().item("processed_" + ctx.signal().id());
                 });
 
-        String result = order.request(new Order("42"), String.class)
+        String result = order.requestUni(new Order("42"), String.class)
                 .ifNoItem()
                 .after(Duration.ofSeconds(1))
                 .fail()
@@ -109,7 +109,7 @@ public class ReceiversTest {
                 });
 
         // Unqualified publish — should NOT reach the @Priority receiver
-        anyOrder.publishAndForget(new Order("1"));
+        anyOrder.publish(new Order("1"));
         try {
             Thread.sleep(500);
         } catch (InterruptedException e) {
@@ -118,7 +118,7 @@ public class ReceiversTest {
         assertTrue(received.isEmpty(), "Qualified receiver should not receive unqualified signal");
 
         // Qualified publish — should reach the @Priority receiver
-        anyOrder.select(Priority.Literal.INSTANCE).publishAndForget(new Order("2"));
+        anyOrder.select(Priority.Literal.INSTANCE).publish(new Order("2"));
         Awaitility.await().until(() -> received.size() >= 1);
         assertEquals(1, received.size());
         assertEquals("priority_2", received.get(0));
@@ -155,7 +155,7 @@ public class ReceiversTest {
                     virtualFlags.add(Thread.currentThread().isVirtual());
                 });
 
-        order.publishAndForget(new Order("vt"));
+        order.publish(new Order("vt"));
         Awaitility.await().until(() -> virtualFlags.size() >= 1);
         assertEquals(1, virtualFlags.size());
         assertTrue(virtualFlags.get(0), "Receiver should be executed on a virtual thread");

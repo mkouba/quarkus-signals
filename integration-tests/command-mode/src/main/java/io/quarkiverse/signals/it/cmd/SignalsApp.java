@@ -22,24 +22,24 @@ public class SignalsApp implements QuarkusApplication {
 
     @Override
     public int run(String... args) {
-        // Test requestAndAwait with blocking receiver
-        String result = signal.requestAndAwait(new Cmd("hello"), String.class);
+        // Test request with blocking receiver
+        String result = signal.request(new Cmd("hello"), String.class);
         if (!"HELLO".equals(result)) {
-            System.err.println("requestAndAwait failed: expected HELLO, got " + result);
+            System.err.println("request failed: expected HELLO, got " + result);
             return 1;
         }
 
-        // Test requestAndAwait with virtual thread receiver
-        Integer length = signal.requestAndAwait(new Cmd("hello"), Integer.class);
+        // Test request with virtual thread receiver
+        Integer length = signal.request(new Cmd("hello"), Integer.class);
         if (length == null || length != 5) {
-            System.err.println("requestAndAwait (virtual thread) failed: expected 5, got " + length);
+            System.err.println("request (virtual thread) failed: expected 5, got " + length);
             return 1;
         }
 
         // Test send (fire-and-forget, unicast — round-robin picks one receiver)
         myReceivers.blockingCount.set(0);
         myReceivers.virtualCount.set(0);
-        signal.sendAndForget(new Cmd("fire"));
+        signal.send(new Cmd("fire"));
         // Give async delivery some time
         try {
             Thread.sleep(500);
@@ -47,14 +47,14 @@ public class SignalsApp implements QuarkusApplication {
             Thread.currentThread().interrupt();
         }
         if (myReceivers.blockingCount.get() + myReceivers.virtualCount.get() == 0) {
-            System.err.println("sendAndForget failed: no receiver was invoked");
+            System.err.println("send failed: no receiver was invoked");
             return 1;
         }
 
         // Test publish (multicast, blocking await)
         myReceivers.blockingCount.set(0);
         myReceivers.virtualCount.set(0);
-        signal.publish(new Cmd("multi"))
+        signal.publishUni(new Cmd("multi"))
                 .await().indefinitely();
         if (myReceivers.blockingCount.get() == 0 || myReceivers.virtualCount.get() == 0) {
             System.err.println("publish failed: not all receivers were invoked (blocking="

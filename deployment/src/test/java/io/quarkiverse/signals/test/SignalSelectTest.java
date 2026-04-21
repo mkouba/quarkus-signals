@@ -49,7 +49,7 @@ public class SignalSelectTest {
 
         // select @Urgent — should reach only the qualified receiver
         Uni<String> uni = msg.select(Urgent.Literal.INSTANCE)
-                .request(new Msg("fire"), String.class);
+                .requestUni(new Msg("fire"), String.class);
         String result = uni.ifNoItem()
                 .after(Duration.ofSeconds(1))
                 .fail()

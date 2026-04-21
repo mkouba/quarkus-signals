@@ -48,8 +48,8 @@ public interface SignalContext<T> {
     /**
      * The type of emission that triggered the receiver.
      *
-     * @see Signal#publishAndForget(Object)
-     * @see Signal#sendAndForget(Object)
+     * @see Signal#publish(Object)
+     * @see Signal#send(Object)
      * @see Signal#request(Object, Class)
      */
     enum EmissionType {

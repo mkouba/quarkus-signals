@@ -59,7 +59,7 @@ public class SpiTest {
     public void testMetadataEnrichers() {
         receivers.receivedContexts.clear();
 
-        String result = signal.request(new Cmd("hello"), String.class)
+        String result = signal.requestUni(new Cmd("hello"), String.class)
                 .ifNoItem().after(Duration.ofSeconds(5)).fail()
                 .await().indefinitely();
 
@@ -83,7 +83,7 @@ public class SpiTest {
         // SignalContext is created after each enricher run
         receivers.receivedContexts.clear();
 
-        signal.request(new Cmd("order"), String.class)
+        signal.requestUni(new Cmd("order"), String.class)
                 .ifNoItem().after(Duration.ofSeconds(5)).fail()
                 .await().indefinitely();
 
@@ -96,7 +96,7 @@ public class SpiTest {
         // Signal already has "correlationId" in metadata — enricher tries to put the same key
         IllegalArgumentException e = assertThrows(IllegalArgumentException.class, () -> {
             signal.putMetadata("correlationId", "existing")
-                    .request(new Cmd("dup"), String.class)
+                    .requestUni(new Cmd("dup"), String.class)
                     .ifNoItem().after(Duration.ofSeconds(5)).fail()
                     .await().indefinitely();
         });
@@ -109,7 +109,7 @@ public class SpiTest {
 
         // LoggingInterceptor
         // TransformInterceptor uppercases String results
-        String result = signal.request(new Cmd("hello"), String.class)
+        String result = signal.requestUni(new Cmd("hello"), String.class)
                 .ifNoItem().after(Duration.ofSeconds(5)).fail()
                 .await().indefinitely();
 
@@ -124,7 +124,7 @@ public class SpiTest {
         loggingInterceptor.log.clear();
 
         // publish delivers to all receivers — interceptor should be called for each
-        signal.publish(new Cmd("multi"))
+        signal.publishUni(new Cmd("multi"))
                 .ifNoItem().after(Duration.ofSeconds(5)).fail()
                 .await().indefinitely();
 
@@ -137,7 +137,7 @@ public class SpiTest {
         transformInterceptor.interceptorRequestIds.clear();
         receivers.receiverRequestIds.clear();
 
-        signal.request(new Cmd("ctx-test"), String.class)
+        signal.requestUni(new Cmd("ctx-test"), String.class)
                 .ifNoItem().after(Duration.ofSeconds(5)).fail()
                 .await().indefinitely();
 

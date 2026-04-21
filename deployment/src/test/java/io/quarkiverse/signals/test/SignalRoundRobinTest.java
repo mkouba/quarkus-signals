@@ -17,7 +17,7 @@ import io.quarkiverse.signals.Signal;
 import io.quarkus.test.QuarkusUnitTest;
 
 /**
- * Verifies that {@link Signal#sendAndForget(Object)} rotates across matching receivers in round-robin order.
+ * Verifies that {@link Signal#send(Object)} rotates across matching receivers in round-robin order.
  */
 public class SignalRoundRobinTest {
 
@@ -37,7 +37,7 @@ public class SignalRoundRobinTest {
 
         // Send 4 signals — should cycle across the two unqualified receivers
         for (int i = 0; i < 4; i++) {
-            ping.sendAndForget(new Ping(i));
+            ping.send(new Ping(i));
         }
         Awaitility.await().until(() -> receivers.sequence.size() >= 4);
         assertEquals(4, receivers.sequence.size());

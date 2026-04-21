@@ -31,9 +31,9 @@ import io.smallrye.mutiny.Uni;
  * <p>
  * A signal can be emitted in three ways:
  * <ul>
- * <li>{@link #publishAndForget(Object)} and {@link #publish(Object)} &mdash; delivers the signal to <em>all</em> matching
+ * <li>{@link #publish(Object)} and {@link #publishUni(Object)} &mdash; delivers the signal to <em>all</em> matching
  * receivers (multicast).</li>
- * <li>{@link #sendAndForget(Object)} and {@link #send(Object)} &mdash; delivers the signal to a <em>single</em> matching
+ * <li>{@link #send(Object)} and {@link #sendUni(Object)} &mdash; delivers the signal to a <em>single</em> matching
  * receiver, selected in round-robin order (unicast).</li>
  * <li>{@link #request(Object, Class)} &mdash; delivers the signal to a <em>single</em> matching receiver and returns the
  * response (unicast, request-reply).</li>
@@ -116,86 +116,22 @@ public interface Signal<T> {
      * All receivers are executed asynchronously.
      *
      * @param signal the signal object
-     * @see #publish(Object)
+     * @see #publishUni(Object)
      * @see Receives
      */
-    void publishAndForget(T signal);
+    void publish(T signal);
 
     /**
-     * /**
      * Sends a signal to <em>all</em> receivers matching the specified signal type and qualifiers (multicast).
      * <p>
      * All receivers are executed asynchronously.
      *
+     * @param signal the signal object
      * @return a {@link Uni} that completes when all receivers are executed
-     * @see #publishAndForget(Object)
+     * @see #publish(Object)
      */
     @CheckReturnValue
-    Uni<Void> publish(T signal);
-
-    /**
-     * Sends a signal to a <em>single</em> receiver matching the specified signal type, response type and qualifiers, and
-     * returns the response (unicast, request-reply).
-     * <p>
-     * If multiple receivers match, one is selected in round-robin order.
-     *
-     * @param <R> the response type
-     * @param signal the signal object
-     * @param responseType the expected response type
-     * @return a {@link Uni} that completes with the receiver's response
-     * @see Receives
-     */
-    @CheckReturnValue
-    <R> Uni<R> request(T signal, Class<R> responseType);
-
-    /**
-     * Sends a signal to a <em>single</em> receiver matching the specified signal type, response type and qualifiers, and
-     * returns the response (unicast, request-reply).
-     * <p>
-     * If multiple receivers match, one is selected in round-robin order.
-     *
-     * @param <R> the response type
-     * @param signal the signal object
-     * @param responseType a {@link TypeLiteral} representing the expected response type
-     * @return a {@link Uni} that completes with the receiver's response
-     * @see Receives
-     */
-    @CheckReturnValue
-    <R> Uni<R> request(T signal, TypeLiteral<R> responseType);
-
-    /**
-     * Sends a signal to a <em>single</em> receiver matching the specified signal type, response type and qualifiers, and
-     * blocks until the response is available (unicast, request-reply).
-     * <p>
-     * If multiple receivers match, one is selected in round-robin order.
-     *
-     * @param <R> the response type
-     * @param signal the signal object
-     * @param responseType the expected response type
-     * @return the receiver's response
-     * @see #request(Object, Class)
-     * @see Receives
-     */
-    default <R> R requestAndAwait(T signal, Class<R> responseType) {
-        return request(signal, responseType).await().indefinitely();
-    }
-
-    /**
-     * Sends a signal to a <em>single</em> receiver matching the specified signal type, response type and qualifiers, and
-     * blocks until the response is available (unicast, request-reply).
-     * <p>
-     * If multiple receivers match, one is selected in round-robin order.
-     *
-     * @param <R> the response type
-     * @param signal the signal object
-     * @param responseType a {@link TypeLiteral} representing the expected response type
-     * @return the receiver's response
-     * @see #request(Object, TypeLiteral)
-     * @see Receives
-     */
-    default <R> R requestAndAwait(T signal, TypeLiteral<R> responseType) {
-        return request(signal, responseType).await().indefinitely();
-    }
+    Uni<Void> publishUni(T signal);
 
     /**
      * Sends a signal to a <em>single</em> receiver matching the specified signal type and qualifiers
@@ -204,10 +140,10 @@ public interface Signal<T> {
      * If multiple receivers match, one is selected in round-robin order.
      *
      * @param signal the signal object
+     * @see #sendUni(Object)
      * @see Receives
-     * @see #send(Object)
      */
-    void sendAndForget(T signal);
+    void send(T signal);
 
     /**
      * Sends a signal to a <em>single</em> receiver matching the specified signal type and qualifiers
@@ -216,10 +152,76 @@ public interface Signal<T> {
      * If multiple receivers match, one is selected in round-robin order.
      *
      * @param signal the signal object
-     * @see Receives
      * @return a {@link Uni} that completes when a receiver is executed
+     * @see #send(Object)
      */
     @CheckReturnValue
-    Uni<Void> send(T signal);
+    Uni<Void> sendUni(T signal);
+
+    /**
+     * Sends a signal to a <em>single</em> receiver matching the specified signal type, response type and qualifiers, and
+     * blocks until the response is available (unicast, request-reply).
+     * <p>
+     * If multiple receivers match, one is selected in round-robin order.
+     *
+     * @param <R> the response type
+     * @param signal the signal object
+     * @param responseType the expected response type
+     * @return the receiver's response
+     * @see #requestUni(Object, Class)
+     * @see Receives
+     */
+    default <R> R request(T signal, Class<R> responseType) {
+        return requestUni(signal, responseType).await().indefinitely();
+    }
+
+    /**
+     * Sends a signal to a <em>single</em> receiver matching the specified signal type, response type and qualifiers, and
+     * blocks until the response is available (unicast, request-reply).
+     * <p>
+     * If multiple receivers match, one is selected in round-robin order.
+     *
+     * @param <R> the response type
+     * @param signal the signal object
+     * @param responseType a {@link TypeLiteral} representing the expected response type
+     * @return the receiver's response
+     * @see #requestUni(Object, TypeLiteral)
+     * @see Receives
+     */
+    default <R> R request(T signal, TypeLiteral<R> responseType) {
+        return requestUni(signal, responseType).await().indefinitely();
+    }
+
+    /**
+     * Sends a signal to a <em>single</em> receiver matching the specified signal type, response type and qualifiers, and
+     * returns the response (unicast, request-reply).
+     * <p>
+     * If multiple receivers match, one is selected in round-robin order.
+     *
+     * @param <R> the response type
+     * @param signal the signal object
+     * @param responseType the expected response type
+     * @return a {@link Uni} that completes with the receiver's response
+     * @see #request(Object, Class)
+     * @see Receives
+     */
+    @CheckReturnValue
+    <R> Uni<R> requestUni(T signal, Class<R> responseType);
+
+    /**
+     * Sends a signal to a <em>single</em> receiver matching the specified signal type, response type and qualifiers, and
+     * returns the response (unicast, request-reply).
+     * <p>
+     * If multiple receivers match, one is selected in round-robin order.
+     *
+     * @param <R> the response type
+     * @param signal the signal object
+     * @param responseType a {@link TypeLiteral} representing the expected response type
+     * @return a {@link Uni} that completes with the receiver's response
+     * @see #request(Object, TypeLiteral)
+     * @see Receives
+     */
+    @CheckReturnValue
+    <R> Uni<R> requestUni(T signal, TypeLiteral<R> responseType);
 
 }

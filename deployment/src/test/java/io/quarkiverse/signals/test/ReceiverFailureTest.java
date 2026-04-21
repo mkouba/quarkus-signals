@@ -64,7 +64,7 @@ public class ReceiverFailureTest {
                 });
         try {
             var failure = assertThrows(CompositeException.class,
-                    () -> cmd.publish(new Cmd("w"))
+                    () -> cmd.publishUni(new Cmd("w"))
                             .ifNoItem().after(Duration.ofSeconds(5)).fail()
                             .await().indefinitely());
             assertInstanceOf(IllegalStateException.class, failure.getCauses().get(0));
@@ -86,7 +86,7 @@ public class ReceiverFailureTest {
                 });
         try {
             var failure = assertThrows(CompositeException.class,
-                    () -> cmd.publish(new Cmd("v"))
+                    () -> cmd.publishUni(new Cmd("v"))
                             .ifNoItem().after(Duration.ofSeconds(5)).fail()
                             .await().indefinitely());
             assertInstanceOf(IllegalStateException.class, failure.getCauses().get(0));
@@ -108,7 +108,7 @@ public class ReceiverFailureTest {
                 });
         try {
             var failure = assertThrows(CompositeException.class,
-                    () -> cmd.publish(new Cmd("e"))
+                    () -> cmd.publishUni(new Cmd("e"))
                             .ifNoItem().after(Duration.ofSeconds(5)).fail()
                             .await().indefinitely());
             assertInstanceOf(IllegalStateException.class, failure.getCauses().get(0));
@@ -130,7 +130,7 @@ public class ReceiverFailureTest {
                 });
         try {
             assertThrows(IllegalStateException.class,
-                    () -> cmd.send(new Cmd("w"))
+                    () -> cmd.sendUni(new Cmd("w"))
                             .ifNoItem().after(Duration.ofSeconds(5)).fail()
                             .await().indefinitely());
         } finally {
@@ -151,7 +151,7 @@ public class ReceiverFailureTest {
                 });
         try {
             assertThrows(IllegalStateException.class,
-                    () -> cmd.send(new Cmd("v"))
+                    () -> cmd.sendUni(new Cmd("v"))
                             .ifNoItem().after(Duration.ofSeconds(5)).fail()
                             .await().indefinitely());
         } finally {
@@ -172,7 +172,7 @@ public class ReceiverFailureTest {
                 });
         try {
             assertThrows(IllegalStateException.class,
-                    () -> cmd.send(new Cmd("e"))
+                    () -> cmd.sendUni(new Cmd("e"))
                             .ifNoItem().after(Duration.ofSeconds(5)).fail()
                             .await().indefinitely());
         } finally {
@@ -194,7 +194,7 @@ public class ReceiverFailureTest {
                 });
         try {
             assertThrows(IllegalStateException.class,
-                    () -> cmd.request(new Cmd("w"), String.class)
+                    () -> cmd.requestUni(new Cmd("w"), String.class)
                             .ifNoItem().after(Duration.ofSeconds(5)).fail()
                             .await().indefinitely());
         } finally {
@@ -216,7 +216,7 @@ public class ReceiverFailureTest {
                 });
         try {
             assertThrows(IllegalStateException.class,
-                    () -> cmd.request(new Cmd("v"), String.class)
+                    () -> cmd.requestUni(new Cmd("v"), String.class)
                             .ifNoItem().after(Duration.ofSeconds(5)).fail()
                             .await().indefinitely());
         } finally {
@@ -238,7 +238,7 @@ public class ReceiverFailureTest {
                 });
         try {
             assertThrows(IllegalStateException.class,
-                    () -> cmd.request(new Cmd("e"), String.class)
+                    () -> cmd.requestUni(new Cmd("e"), String.class)
                             .ifNoItem().after(Duration.ofSeconds(5)).fail()
                             .await().indefinitely());
         } finally {
@@ -249,7 +249,7 @@ public class ReceiverFailureTest {
     @Test
     public void testDeclarativePublishFailureWorkerThread() {
         var failure = assertThrows(CompositeException.class,
-                () -> workerSignal.publish(new WorkerCmd())
+                () -> workerSignal.publishUni(new WorkerCmd())
                         .ifNoItem().after(Duration.ofSeconds(5)).fail()
                         .await().indefinitely());
         assertInstanceOf(IllegalStateException.class, failure.getCauses().get(0));
@@ -258,7 +258,7 @@ public class ReceiverFailureTest {
     @Test
     public void testDeclarativePublishFailureEventLoop() {
         var failure = assertThrows(CompositeException.class,
-                () -> eventLoopSignal.publish(new EventLoopCmd())
+                () -> eventLoopSignal.publishUni(new EventLoopCmd())
                         .ifNoItem().after(Duration.ofSeconds(5)).fail()
                         .await().indefinitely());
         assertInstanceOf(IllegalStateException.class, failure.getCauses().get(0));
@@ -267,7 +267,7 @@ public class ReceiverFailureTest {
     @Test
     public void testDeclarativePublishFailureVirtualThread() {
         var failure = assertThrows(CompositeException.class,
-                () -> virtualSignal.publish(new VirtualCmd())
+                () -> virtualSignal.publishUni(new VirtualCmd())
                         .ifNoItem().after(Duration.ofSeconds(5)).fail()
                         .await().indefinitely());
         assertInstanceOf(IllegalStateException.class, failure.getCauses().get(0));
@@ -276,7 +276,7 @@ public class ReceiverFailureTest {
     @Test
     public void testDeclarativeSendFailureWorkerThread() {
         assertThrows(IllegalStateException.class,
-                () -> workerSignal.send(new WorkerCmd())
+                () -> workerSignal.sendUni(new WorkerCmd())
                         .ifNoItem().after(Duration.ofSeconds(5)).fail()
                         .await().indefinitely());
     }
@@ -284,7 +284,7 @@ public class ReceiverFailureTest {
     @Test
     public void testDeclarativeSendFailureEventLoop() {
         assertThrows(IllegalStateException.class,
-                () -> eventLoopSignal.send(new EventLoopCmd())
+                () -> eventLoopSignal.sendUni(new EventLoopCmd())
                         .ifNoItem().after(Duration.ofSeconds(5)).fail()
                         .await().indefinitely());
     }
@@ -292,7 +292,7 @@ public class ReceiverFailureTest {
     @Test
     public void testDeclarativeSendFailureVirtualThread() {
         assertThrows(IllegalStateException.class,
-                () -> virtualSignal.send(new VirtualCmd())
+                () -> virtualSignal.sendUni(new VirtualCmd())
                         .ifNoItem().after(Duration.ofSeconds(5)).fail()
                         .await().indefinitely());
     }

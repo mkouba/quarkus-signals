@@ -51,19 +51,19 @@ public class SignalsTest {
     @Test
     public void testSignals() throws InterruptedException {
         myReceivers.sequence.clear();
-        foo.publishAndForget(new Foo("pub_sub"));
+        foo.publish(new Foo("pub_sub"));
         Awaitility.await().until(() -> myReceivers.sequence.size() >= 2);
         assertEquals(2, myReceivers.sequence.size());
         assertThat(myReceivers.sequence).contains("blocking_pub_sub", "blockingString_pub_sub");
 
         myReceivers.sequence.clear();
-        foo.sendAndForget(new Foo("one_to_one"));
+        foo.send(new Foo("one_to_one"));
         Awaitility.await().until(() -> myReceivers.sequence.size() >= 1);
         assertEquals(1, myReceivers.sequence.size());
         assertThat(myReceivers.sequence).containsAnyOf("blocking_one_to_one", "blockingString_one_to_one");
 
         myReceivers.sequence.clear();
-        Uni<String> uni = reactiveFoo.request(new Foo("req"), String.class);
+        Uni<String> uni = reactiveFoo.requestUni(new Foo("req"), String.class);
         assertEquals("REQ", uni.ifNoItem()
                 .after(Duration.ofSeconds(1))
                 .fail()
@@ -72,7 +72,7 @@ public class SignalsTest {
         assertThat(myReceivers.sequence).contains("reactiveString_req");
 
         myReceivers.sequence.clear();
-        assertEquals("req", foo.request(new Foo("REQ"), String.class)
+        assertEquals("req", foo.requestUni(new Foo("REQ"), String.class)
                 .ifNoItem()
                 .after(Duration.ofSeconds(1))
                 .fail()
@@ -82,7 +82,7 @@ public class SignalsTest {
 
         // No receiver matches the response type
         myReceivers.sequence.clear();
-        assertNull(foo.request(new Foo("REQ"), int.class)
+        assertNull(foo.requestUni(new Foo("REQ"), int.class)
                 .ifNoItem()
                 .after(Duration.ofSeconds(1))
                 .fail()

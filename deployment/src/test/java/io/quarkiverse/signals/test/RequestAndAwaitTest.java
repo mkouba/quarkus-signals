@@ -16,7 +16,7 @@ import io.quarkus.test.QuarkusUnitTest;
 import io.smallrye.mutiny.Uni;
 
 /**
- * Verifies that {@link Signal#requestAndAwait(Object, Class)} blocks until the response is available.
+ * Verifies that {@link Signal#request(Object, Class)} blocks until the response is available.
  */
 public class RequestAndAwaitTest {
 
@@ -29,26 +29,26 @@ public class RequestAndAwaitTest {
 
     @Test
     public void testBlockingReceiver() {
-        String result = signal.requestAndAwait(new Cmd("hello"), String.class);
+        String result = signal.request(new Cmd("hello"), String.class);
         assertEquals("HELLO", result);
     }
 
     @Test
     public void testReactiveReceiver() {
-        Integer result = signal.requestAndAwait(new Cmd("hello"), Integer.class);
+        Integer result = signal.request(new Cmd("hello"), Integer.class);
         assertEquals(5, result);
     }
 
     @Test
     public void testNoMatchingReceiver() {
-        Double result = signal.requestAndAwait(new Cmd("hello"), Double.class);
+        Double result = signal.request(new Cmd("hello"), Double.class);
         assertNull(result);
     }
 
     @Test
     public void testReceiverFailure() {
         assertThrows(IllegalStateException.class,
-                () -> signal.requestAndAwait(new Cmd("fail"), String.class));
+                () -> signal.request(new Cmd("fail"), String.class));
     }
 
     @Singleton

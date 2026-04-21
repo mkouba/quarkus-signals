@@ -77,12 +77,12 @@ public class SignalImpl<T> implements Signal<T> {
     }
 
     @Override
-    public void publishAndForget(T signal) {
-        publish(signal).subscribe().with(NOOP);
+    public void publish(T signal) {
+        publishUni(signal).subscribe().with(NOOP);
     }
 
     @Override
-    public Uni<Void> publish(T signal) {
+    public Uni<Void> publishUni(T signal) {
         List<Receiver<?, ?>> receivers = manager.resolveReceivers(signalType, qualifiers);
         if (receivers.isEmpty()) {
             return Uni.createFrom().voidItem();
@@ -98,16 +98,16 @@ public class SignalImpl<T> implements Signal<T> {
     }
 
     @Override
-    public <R> Uni<R> request(T signal, Class<R> responseType) {
-        return request(signal, (Type) responseType);
+    public <R> Uni<R> requestUni(T signal, Class<R> responseType) {
+        return requestUni(signal, (Type) responseType);
     }
 
     @Override
-    public <R> Uni<R> request(T signal, TypeLiteral<R> responseType) {
-        return request(signal, responseType.getType());
+    public <R> Uni<R> requestUni(T signal, TypeLiteral<R> responseType) {
+        return requestUni(signal, responseType.getType());
     }
 
-    private <R> Uni<R> request(T signal, Type responseType) {
+    private <R> Uni<R> requestUni(T signal, Type responseType) {
         var receiver = manager.nextReceiver(signalType, qualifiers, responseType);
         if (receiver != null) {
             return Uni.createFrom().deferred(() -> {
@@ -120,12 +120,12 @@ public class SignalImpl<T> implements Signal<T> {
     }
 
     @Override
-    public void sendAndForget(T signal) {
-        send(signal).subscribe().with(NOOP);
+    public void send(T signal) {
+        sendUni(signal).subscribe().with(NOOP);
     }
 
     @Override
-    public Uni<Void> send(T signal) {
+    public Uni<Void> sendUni(T signal) {
         var receiver = manager.nextReceiver(signalType, qualifiers, null);
         if (receiver != null) {
             return Uni.createFrom().deferred(() -> {
