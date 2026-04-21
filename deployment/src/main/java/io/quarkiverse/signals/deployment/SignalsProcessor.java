@@ -1,11 +1,12 @@
 package io.quarkiverse.signals.deployment;
 
+import static io.quarkiverse.signals.deployment.ReceiverExecutorImplementationBuildItem.ReceiverExecutorImplementation.DEFAULT_BLOCKING;
+import static io.quarkiverse.signals.deployment.ReceiverExecutorImplementationBuildItem.ReceiverExecutorImplementation.VERTX;
 import static io.quarkus.deployment.annotations.ExecutionTime.RUNTIME_INIT;
 
 import java.lang.reflect.Modifier;
 import java.lang.reflect.Type;
 import java.util.ArrayList;
-import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
@@ -42,7 +43,6 @@ import io.quarkiverse.signals.runtime.SignalBeanCreator;
 import io.quarkiverse.signals.runtime.SignalsRecorder;
 import io.quarkiverse.signals.runtime.SignalsRecorder.SignalsContext;
 import io.quarkiverse.signals.runtime.VertxReceiverExecutor;
-import io.quarkiverse.signals.runtime.VirtualThreadReceiverExecutor;
 import io.quarkiverse.signals.spi.Receiver.ExecutionModel;
 import io.quarkus.arc.deployment.AdditionalBeanBuildItem;
 import io.quarkus.arc.deployment.AutoAddScopeBuildItem;
@@ -84,7 +84,7 @@ class SignalsProcessor {
     void collectReceivers(BeanRegistrationPhaseBuildItem beanRegistration,
             InvokerFactoryBuildItem invokerFactory,
             BuildProducer<ReceiverMethodBuildItem> receivers,
-            SupportedExecutionModelsBuildItem supportedExecutionModels) {
+            ReceiverExecutorImplementationBuildItem supportedExecutionModels) {
 
         Set<DotName> knownQualifiers = beanRegistration.getBeanProcessor().getBeanDeployment().getQualifiers()
                 .stream()
@@ -370,28 +370,27 @@ class SignalsProcessor {
     }
 
     @BuildStep
-    SupportedExecutionModelsBuildItem supportedExecutionModels(Capabilities capabilities) {
+    ReceiverExecutorImplementationBuildItem supportedExecutionModels(Capabilities capabilities) {
         Set<ExecutionModel> supportedModels;
         if (capabilities.isPresent(Capability.VERTX)) {
-            supportedModels = EnumSet.allOf(ExecutionModel.class);
+            return new ReceiverExecutorImplementationBuildItem(VERTX);
         } else {
-            // TODO quarkus-virtual-threads does not declare capability
-            supportedModels = EnumSet.of(ExecutionModel.BLOCKING, ExecutionModel.VIRTUAL_THREAD);
+            // Note that quarkus-virtual-threads does require quarkus-vertx,
+            // although it does not depend on the extension directly (to avoid the cycle)
+            return new ReceiverExecutorImplementationBuildItem(DEFAULT_BLOCKING);
         }
-        return new SupportedExecutionModelsBuildItem(supportedModels);
     }
 
     @BuildStep
     void registerBeans(BuildProducer<AdditionalBeanBuildItem> beans,
-            SupportedExecutionModelsBuildItem supportedExecutionModels) {
+            ReceiverExecutorImplementationBuildItem receiverExecutorImplementation) {
         AdditionalBeanBuildItem.Builder builder = AdditionalBeanBuildItem.builder();
         builder.addBeanClass(ReceiverManager.class);
-        if (supportedExecutionModels.isSupported(ExecutionModel.NON_BLOCKING)) {
-            builder.addBeanClass(VertxReceiverExecutor.class);
-        } else if (supportedExecutionModels.isSupported(ExecutionModel.VIRTUAL_THREAD)) {
-            builder.addBeanClass(VirtualThreadReceiverExecutor.class);
-        } else {
-            builder.addBeanClass(DefaultBlockingReceiverExecutor.class);
+        switch (receiverExecutorImplementation.getImplemenation()) {
+            case VERTX -> builder.addBeanClass(VertxReceiverExecutor.class);
+            case DEFAULT_BLOCKING -> builder.addBeanClass(DefaultBlockingReceiverExecutor.class);
+            default -> throw new IllegalArgumentException(
+                    "Unexpected value: " + receiverExecutorImplementation.getImplemenation());
         }
         beans.produce(builder.build());
     }

@@ -9,7 +9,6 @@ import io.quarkiverse.signals.Receives;
 import io.quarkiverse.signals.Signal;
 import io.quarkus.runtime.QuarkusApplication;
 import io.quarkus.runtime.annotations.QuarkusMain;
-import io.smallrye.common.annotation.RunOnVirtualThread;
 
 @QuarkusMain
 public class SignalsApp implements QuarkusApplication {
@@ -29,16 +28,8 @@ public class SignalsApp implements QuarkusApplication {
             return 1;
         }
 
-        // Test request with virtual thread receiver
-        Integer length = signal.request(new Cmd("hello"), Integer.class);
-        if (length == null || length != 5) {
-            System.err.println("request (virtual thread) failed: expected 5, got " + length);
-            return 1;
-        }
-
         // Test send (fire-and-forget, unicast — round-robin picks one receiver)
         myReceivers.blockingCount.set(0);
-        myReceivers.virtualCount.set(0);
         signal.send(new Cmd("fire"));
         // Give async delivery some time
         try {
@@ -46,19 +37,18 @@ public class SignalsApp implements QuarkusApplication {
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
         }
-        if (myReceivers.blockingCount.get() + myReceivers.virtualCount.get() == 0) {
+        if (myReceivers.blockingCount.get() == 0) {
             System.err.println("send failed: no receiver was invoked");
             return 1;
         }
 
         // Test publish (multicast, blocking await)
         myReceivers.blockingCount.set(0);
-        myReceivers.virtualCount.set(0);
         signal.publishUni(new Cmd("multi"))
                 .await().indefinitely();
-        if (myReceivers.blockingCount.get() == 0 || myReceivers.virtualCount.get() == 0) {
+        if (myReceivers.blockingCount.get() == 0) {
             System.err.println("publish failed: not all receivers were invoked (blocking="
-                    + myReceivers.blockingCount.get() + ", virtual=" + myReceivers.virtualCount.get() + ")");
+                    + myReceivers.blockingCount.get() + ")");
             return 1;
         }
 
@@ -73,7 +63,6 @@ public class SignalsApp implements QuarkusApplication {
     public static class MyReceivers {
 
         final AtomicInteger blockingCount = new AtomicInteger();
-        final AtomicInteger virtualCount = new AtomicInteger();
 
         // Blocking signature → BLOCKING
         String toUpperCase(@Receives Cmd cmd) {
@@ -81,11 +70,5 @@ public class SignalsApp implements QuarkusApplication {
             return cmd.value().toUpperCase();
         }
 
-        // @RunOnVirtualThread → VIRTUAL_THREAD
-        @RunOnVirtualThread
-        int toLength(@Receives Cmd cmd) {
-            virtualCount.incrementAndGet();
-            return cmd.value().length();
-        }
     }
 }
