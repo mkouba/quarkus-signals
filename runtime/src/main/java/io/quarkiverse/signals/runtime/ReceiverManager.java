@@ -27,7 +27,6 @@ import io.quarkiverse.signals.spi.Receiver;
 import io.quarkiverse.signals.spi.ReceiverInterceptor;
 import io.quarkiverse.signals.spi.SignalMetadataEnricher;
 import io.quarkus.arc.All;
-import io.quarkus.arc.Arc;
 import io.quarkus.arc.Unremovable;
 import io.smallrye.common.annotation.Identifier;
 import io.smallrye.mutiny.Uni;
@@ -50,9 +49,11 @@ public class ReceiverManager implements Receivers {
 
     private final List<ReceiverInterceptor> interceptors;
 
-    ReceiverManager(SignalsContext signalsContext, ReceiverExecutor executor,
+    ReceiverManager(SignalsContext signalsContext,
+            ReceiverExecutor executor,
             @All List<SignalMetadataEnricher> allEnrichers,
-            @All List<ReceiverInterceptor> allInterceptors) {
+            @All List<ReceiverInterceptor> allInterceptors,
+            BeanContainer beanContainer) {
         List<String> invokerReceiversClasses = signalsContext.receiversClasses();
         ClassLoader tccl = Thread.currentThread().getContextClassLoader();
         this.receivers = new ConcurrentHashMap<>();
@@ -66,7 +67,7 @@ public class ReceiverManager implements Receivers {
         }
         this.resolvedReceivers = new ConcurrentHashMap<>();
         this.executor = executor;
-        this.beanContainer = Arc.container().beanManager();
+        this.beanContainer = beanContainer;
         this.enrichers = orderByIdentifier(allEnrichers, signalsContext.orderedEnricherIds());
         this.interceptors = orderByIdentifier(allInterceptors, signalsContext.orderedInterceptorIds());
     }
