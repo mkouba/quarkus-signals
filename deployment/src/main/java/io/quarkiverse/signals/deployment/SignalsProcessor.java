@@ -45,6 +45,7 @@ import io.quarkiverse.signals.runtime.SignalsRecorder.SignalsContext;
 import io.quarkiverse.signals.runtime.VertxReceiverExecutor;
 import io.quarkiverse.signals.runtime.VirtualThreadReceiverExecutor;
 import io.quarkus.arc.deployment.AdditionalBeanBuildItem;
+import io.quarkus.arc.deployment.AutoAddScopeBuildItem;
 import io.quarkus.arc.deployment.BeanArchiveIndexBuildItem;
 import io.quarkus.arc.deployment.BeanDiscoveryFinishedBuildItem;
 import io.quarkus.arc.deployment.BeanRegistrationPhaseBuildItem;
@@ -52,6 +53,7 @@ import io.quarkus.arc.deployment.InvokerFactoryBuildItem;
 import io.quarkus.arc.deployment.SyntheticBeanBuildItem;
 import io.quarkus.arc.deployment.SyntheticBeanBuildItem.ExtendedBeanConfigurator;
 import io.quarkus.arc.processor.BeanInfo;
+import io.quarkus.arc.processor.BuiltinScope;
 import io.quarkus.arc.processor.InjectionPointInfo;
 import io.quarkus.arc.processor.InvokerBuilder;
 import io.quarkus.arc.processor.RuntimeTypeCreator;
@@ -84,8 +86,10 @@ class SignalsProcessor {
             BuildProducer<ReceiverMethodBuildItem> receivers,
             SupportedExecutionModelsBuildItem supportedExecutionModels) {
 
-        Set<DotName> knownQualifiers = beanRegistration.getBeanProcessor().getBeanDeployment().getQualifiers().stream()
-                .map(ci -> ci.name()).collect(Collectors.toSet());
+        Set<DotName> knownQualifiers = beanRegistration.getBeanProcessor().getBeanDeployment().getQualifiers()
+                .stream()
+                .map(ClassInfo::name)
+                .collect(Collectors.toSet());
 
         for (BeanInfo bean : beanRegistration.getContext().beans().classBeans()
                 .filter(b -> b.getTarget().get().asClass().hasAnnotation(DotNames.RECEIVES))) {
@@ -294,6 +298,14 @@ class SignalsProcessor {
                 .creator(SignalBeanCreator.class)
                 .forceApplicationClass()
                 .done());
+    }
+
+    @BuildStep
+    AutoAddScopeBuildItem addScopeToReceivers() {
+        return AutoAddScopeBuildItem.builder()
+                .containsAnnotations(DotNames.RECEIVES)
+                .reason("Add @Singleton to a class with @Receives methods")
+                .defaultScope(BuiltinScope.SINGLETON).build();
     }
 
     @BuildStep

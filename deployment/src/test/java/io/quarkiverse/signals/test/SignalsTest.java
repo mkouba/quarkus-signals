@@ -21,7 +21,6 @@ import jakarta.enterprise.inject.spi.BeanManager;
 import jakarta.enterprise.util.AnnotationLiteral;
 import jakarta.inject.Inject;
 import jakarta.inject.Qualifier;
-import jakarta.inject.Singleton;
 
 import org.awaitility.Awaitility;
 import org.junit.jupiter.api.Test;
@@ -91,7 +90,7 @@ public class SignalsTest {
         assertEquals(0, myReceivers.sequence.size());
     }
 
-    @Singleton
+    // @Singleton added automatically
     public static class MyReceivers {
 
         final List<String> sequence = new CopyOnWriteArrayList<>();
