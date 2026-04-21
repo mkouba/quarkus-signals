@@ -90,26 +90,22 @@ public class TopologicalSortTest {
 
     @Test
     public void testBeforeNonExistentId() {
-        IllegalStateException e = assertThrows(IllegalStateException.class, () -> {
-            TopologicalSort.sort(
-                    Set.of("a"),
-                    Map.of("a", List.of("nonexistent")),
-                    Map.of(),
-                    TYPE);
-        });
-        assertTrue(e.getMessage().contains("nonexistent"));
+        List<String> result = TopologicalSort.sort(
+                Set.of("a"),
+                Map.of("a", List.of("nonexistent")),
+                Map.of(),
+                TYPE);
+        assertEquals(List.of("a"), result);
     }
 
     @Test
     public void testAfterNonExistentId() {
-        IllegalStateException e = assertThrows(IllegalStateException.class, () -> {
-            TopologicalSort.sort(
-                    Set.of("a"),
-                    Map.of(),
-                    Map.of("a", List.of("nonexistent")),
-                    TYPE);
-        });
-        assertTrue(e.getMessage().contains("nonexistent"));
+        List<String> result = TopologicalSort.sort(
+                Set.of("a"),
+                Map.of(),
+                Map.of("a", List.of("nonexistent")),
+                TYPE);
+        assertEquals(List.of("a"), result);
     }
 
     @Test

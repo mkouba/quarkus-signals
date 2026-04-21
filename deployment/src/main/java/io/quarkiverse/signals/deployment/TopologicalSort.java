@@ -8,10 +8,14 @@ import java.util.Map;
 import java.util.PriorityQueue;
 import java.util.Set;
 
+import org.jboss.logging.Logger;
+
 /**
  * Kahn's algorithm topological sort with alphabetical tiebreaker for deterministic ordering.
  */
 class TopologicalSort {
+
+    private static final Logger LOG = Logger.getLogger(TopologicalSort.class);
 
     /**
      * @param allIds all component identifiers
@@ -19,7 +23,7 @@ class TopologicalSort {
      * @param afterEdges map of id to the list of ids it must come after
      * @param componentTypeName the name of the component type, used in error messages
      * @return the ordered list of identifiers
-     * @throws IllegalStateException if a referenced identifier does not exist or a cycle is detected
+     * @throws IllegalStateException if a cycle is detected
      */
     static List<String> sort(Set<String> allIds, Map<String, List<String>> beforeEdges,
             Map<String, List<String>> afterEdges, String componentTypeName) {
@@ -30,14 +34,14 @@ class TopologicalSort {
             inDegree.put(id, 0);
         }
 
-        // "A before B" means edge A -> B
+        // "A before B" means edge A -> B (skip if B is not present)
         for (Map.Entry<String, List<String>> entry : beforeEdges.entrySet()) {
             String from = entry.getKey();
             for (String to : entry.getValue()) {
                 if (!allIds.contains(to)) {
-                    throw new IllegalStateException(
-                            componentTypeName + " '" + from + "' declares @ComponentOrder(before = \"" + to
-                                    + "\") but no " + componentTypeName + " with @Identifier(\"" + to + "\") exists");
+                    LOG.warnf("%s '%s' declares @ComponentOrder(before = \"%s\") but no %s with @Identifier(\"%s\") exists",
+                            componentTypeName, from, to, componentTypeName, to);
+                    continue;
                 }
                 if (graph.get(from).add(to)) {
                     inDegree.merge(to, 1, Integer::sum);
@@ -45,14 +49,14 @@ class TopologicalSort {
             }
         }
 
-        // "A after B" means edge B -> A
+        // "A after B" means edge B -> A (skip if B is not present)
         for (Map.Entry<String, List<String>> entry : afterEdges.entrySet()) {
             String to = entry.getKey();
             for (String from : entry.getValue()) {
                 if (!allIds.contains(from)) {
-                    throw new IllegalStateException(
-                            componentTypeName + " '" + to + "' declares @ComponentOrder(after = \"" + from
-                                    + "\") but no " + componentTypeName + " with @Identifier(\"" + from + "\") exists");
+                    LOG.warnf("%s '%s' declares @ComponentOrder(after = \"%s\") but no %s with @Identifier(\"%s\") exists",
+                            componentTypeName, to, from, componentTypeName, from);
+                    continue;
                 }
                 if (graph.get(from).add(to)) {
                     inDegree.merge(to, 1, Integer::sum);
