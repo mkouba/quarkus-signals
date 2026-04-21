@@ -7,8 +7,8 @@ import java.util.function.Function;
 
 import jakarta.enterprise.util.TypeLiteral;
 
-import io.quarkiverse.signals.Receiver.ExecutionModel;
-import io.quarkiverse.signals.Receiver.SignalContext;
+import io.quarkiverse.signals.spi.Receiver;
+import io.quarkiverse.signals.spi.Receiver.ExecutionModel;
 import io.smallrye.mutiny.Uni;
 
 /**

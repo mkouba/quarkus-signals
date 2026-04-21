@@ -56,7 +56,6 @@ import io.smallrye.mutiny.Uni;
  *
  * @param <T> the type of the signal object
  * @see Receives
- * @see Receiver
  */
 public interface Signal<T> {
 

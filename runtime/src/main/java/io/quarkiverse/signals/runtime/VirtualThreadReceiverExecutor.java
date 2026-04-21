@@ -7,7 +7,7 @@ import java.util.concurrent.ExecutorService;
 import jakarta.inject.Inject;
 import jakarta.inject.Singleton;
 
-import io.quarkiverse.signals.Receiver.ExecutionModel;
+import io.quarkiverse.signals.spi.Receiver.ExecutionModel;
 import io.quarkus.virtual.threads.VirtualThreadsRecorder;
 import io.smallrye.mutiny.Uni;
 

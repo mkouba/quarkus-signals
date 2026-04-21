@@ -14,10 +14,9 @@ import java.util.function.Consumer;
 
 import jakarta.enterprise.util.TypeLiteral;
 
-import io.quarkiverse.signals.Receiver;
-import io.quarkiverse.signals.Receiver.EmissionType;
-import io.quarkiverse.signals.Receiver.SignalContext;
 import io.quarkiverse.signals.Signal;
+import io.quarkiverse.signals.SignalContext;
+import io.quarkiverse.signals.spi.Receiver;
 import io.quarkiverse.signals.spi.SignalMetadataEnricher;
 import io.smallrye.mutiny.Uni;
 
@@ -89,7 +88,7 @@ public class SignalImpl<T> implements Signal<T> {
             return Uni.createFrom().voidItem();
         }
         return Uni.createFrom().deferred(() -> {
-            var signalContext = enrich(signal, EmissionType.PUBLISH, null);
+            var signalContext = enrich(signal, SignalContext.EmissionType.PUBLISH, null);
             List<Uni<Object>> unis = new ArrayList<>(receivers.size());
             for (Receiver<?, ?> receiver : receivers) {
                 unis.add(manager.executeReceiver(cast(receiver), signalContext));
@@ -112,7 +111,7 @@ public class SignalImpl<T> implements Signal<T> {
         var receiver = manager.nextReceiver(signalType, qualifiers, responseType);
         if (receiver != null) {
             return Uni.createFrom().deferred(() -> {
-                var signalContext = enrich(signal, EmissionType.REQUEST, responseType);
+                var signalContext = enrich(signal, SignalContext.EmissionType.REQUEST, responseType);
                 return cast(manager.executeReceiver(cast(receiver), signalContext));
             });
         } else {
@@ -130,7 +129,7 @@ public class SignalImpl<T> implements Signal<T> {
         var receiver = manager.nextReceiver(signalType, qualifiers, null);
         if (receiver != null) {
             return Uni.createFrom().deferred(() -> {
-                var signalContext = enrich(signal, EmissionType.SEND, null);
+                var signalContext = enrich(signal, SignalContext.EmissionType.SEND, null);
                 return manager.executeReceiver(cast(receiver), signalContext)
                         .replaceWithVoid();
             });
@@ -147,7 +146,8 @@ public class SignalImpl<T> implements Signal<T> {
         }
     };
 
-    private <SIGNAL> SignalContextImpl<SIGNAL> enrich(SIGNAL signal, EmissionType emissionType, Type responseType) {
+    private <SIGNAL> SignalContextImpl<SIGNAL> enrich(SIGNAL signal, SignalContext.EmissionType emissionType,
+            Type responseType) {
         List<SignalMetadataEnricher> enrichers = manager.enrichers();
         if (enrichers.isEmpty()) {
             return new SignalContextImpl<>(signal, metadata, emissionType, responseType);
@@ -207,10 +207,10 @@ public class SignalImpl<T> implements Signal<T> {
 
         private final SIGNAL signal;
         private final Map<String, Object> meta;
-        private final EmissionType emissionType;
+        private final SignalContext.EmissionType emissionType;
         private final Type responseType;
 
-        SignalContextImpl(SIGNAL signal, Map<String, Object> meta, EmissionType emissionType, Type responseType) {
+        SignalContextImpl(SIGNAL signal, Map<String, Object> meta, SignalContext.EmissionType emissionType, Type responseType) {
             this.signal = signal;
             this.meta = meta;
             this.emissionType = emissionType;
@@ -243,7 +243,7 @@ public class SignalImpl<T> implements Signal<T> {
         }
 
         @Override
-        public EmissionType emissionType() {
+        public SignalContext.EmissionType emissionType() {
             return emissionType;
         }
 

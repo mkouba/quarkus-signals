@@ -1,10 +1,13 @@
-package io.quarkiverse.signals;
+package io.quarkiverse.signals.spi;
 
 import java.lang.annotation.Annotation;
 import java.lang.reflect.Type;
-import java.util.Map;
 import java.util.Set;
 
+import io.quarkiverse.signals.Receivers;
+import io.quarkiverse.signals.Receives;
+import io.quarkiverse.signals.Signal;
+import io.quarkiverse.signals.SignalContext;
 import io.smallrye.common.annotation.CheckReturnValue;
 import io.smallrye.mutiny.Uni;
 
@@ -80,48 +83,6 @@ public interface Receiver<SIGNAL, RESPONSE> {
     Uni<RESPONSE> notify(SignalContext<SIGNAL> context);
 
     /**
-     * Immutable contextual information about an emitted signal, passed to {@link Receiver#notify(SignalContext)}.
-     *
-     * @param <T> the signal type
-     */
-    interface SignalContext<T> {
-
-        /**
-         * @return the metadata attached to the emission, never {@code null}
-         * @see Signal#putMetadata(String, Object)
-         * @see Signal#setMetadata(Map)
-         */
-        Map<String, Object> metadata();
-
-        /**
-         * @return the signal object
-         */
-        T signal();
-
-        /**
-         * @return the type of the signal object
-         */
-        Type signalType();
-
-        /**
-         * @return the expected response type, or {@code null} if the emission is not a request-reply
-         * @see EmissionType#REQUEST
-         */
-        Type responseType();
-
-        /**
-         * @return the qualifiers specified at the emission point
-         */
-        Set<Annotation> qualifiers();
-
-        /**
-         * @return the type of the emission
-         */
-        EmissionType emissionType();
-
-    }
-
-    /**
      * Determines the threading model used to execute a receiver.
      */
     enum ExecutionModel {
@@ -143,31 +104,6 @@ public interface Receiver<SIGNAL, RESPONSE> {
          */
         NON_BLOCKING
 
-    }
-
-    /**
-     * The type of emission that triggered the receiver.
-     *
-     * @see Signal#publishAndForget(Object)
-     * @see Signal#sendAndForget(Object)
-     * @see Signal#request(Object, Class)
-     */
-    enum EmissionType {
-
-        /**
-         * The signal was emitted via {@link Signal#publish(Object)} (multicast).
-         */
-        PUBLISH,
-
-        /**
-         * The signal was emitted via {@link Signal#request(Object, Class)} (unicast, request-reply).
-         */
-        REQUEST,
-
-        /**
-         * The signal was emitted via {@link Signal#send(Object)} (unicast, fire-and-forget).
-         */
-        SEND
     }
 
 }

@@ -7,9 +7,9 @@ import jakarta.inject.Singleton;
 
 import org.jboss.logging.Logger;
 
-import io.quarkiverse.signals.Receiver;
-import io.quarkiverse.signals.Receiver.ExecutionModel;
-import io.quarkiverse.signals.Receiver.SignalContext;
+import io.quarkiverse.signals.SignalContext;
+import io.quarkiverse.signals.spi.Receiver;
+import io.quarkiverse.signals.spi.Receiver.ExecutionModel;
 import io.quarkus.arc.Arc;
 import io.quarkus.arc.ManagedContext;
 import io.quarkus.vertx.core.runtime.context.VertxContextSafetyToggle;

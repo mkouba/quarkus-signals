@@ -19,9 +19,9 @@ import jakarta.inject.Singleton;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
-import io.quarkiverse.signals.Receiver.SignalContext;
 import io.quarkiverse.signals.Receives;
 import io.quarkiverse.signals.Signal;
+import io.quarkiverse.signals.SignalContext;
 import io.quarkiverse.signals.spi.ComponentOrder;
 import io.quarkiverse.signals.spi.ReceiverInterceptor;
 import io.quarkiverse.signals.spi.SignalMetadataEnricher;

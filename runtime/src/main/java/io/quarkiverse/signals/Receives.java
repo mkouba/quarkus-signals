@@ -30,7 +30,7 @@ import java.lang.annotation.Target;
  * </pre>
  *
  * <p>
- * The annotated parameter may also be of type {@link Receiver.SignalContext}, in which case the receiver has access to
+ * The annotated parameter may also be of type {@link SignalContext}, in which case the receiver has access to
  * the full signal context including metadata, qualifiers, and emission type:
  *
  * <pre>
@@ -41,7 +41,6 @@ import java.lang.annotation.Target;
  * </pre>
  *
  * @see Signal
- * @see Receiver
  */
 @Retention(RUNTIME)
 @Target(ElementType.PARAMETER)

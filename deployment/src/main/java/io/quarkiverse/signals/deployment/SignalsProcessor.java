@@ -33,7 +33,6 @@ import org.jboss.jandex.Type.Kind;
 import org.jboss.jandex.TypeVariable;
 import org.jboss.jandex.gizmo2.Jandex2Gizmo;
 
-import io.quarkiverse.signals.Receiver.ExecutionModel;
 import io.quarkiverse.signals.Signal;
 import io.quarkiverse.signals.runtime.DefaultBlockingReceiverExecutor;
 import io.quarkiverse.signals.runtime.InvokerReceiver;
@@ -44,6 +43,7 @@ import io.quarkiverse.signals.runtime.SignalsRecorder;
 import io.quarkiverse.signals.runtime.SignalsRecorder.SignalsContext;
 import io.quarkiverse.signals.runtime.VertxReceiverExecutor;
 import io.quarkiverse.signals.runtime.VirtualThreadReceiverExecutor;
+import io.quarkiverse.signals.spi.Receiver.ExecutionModel;
 import io.quarkus.arc.deployment.AdditionalBeanBuildItem;
 import io.quarkus.arc.deployment.AutoAddScopeBuildItem;
 import io.quarkus.arc.deployment.BeanArchiveIndexBuildItem;

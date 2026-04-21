@@ -13,11 +13,11 @@ import jakarta.inject.Singleton;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
-import io.quarkiverse.signals.Receiver.ExecutionModel;
-import io.quarkiverse.signals.Receiver.SignalContext;
 import io.quarkiverse.signals.Receivers;
 import io.quarkiverse.signals.Receives;
 import io.quarkiverse.signals.Signal;
+import io.quarkiverse.signals.SignalContext;
+import io.quarkiverse.signals.spi.Receiver.ExecutionModel;
 import io.quarkus.test.QuarkusUnitTest;
 import io.smallrye.common.annotation.RunOnVirtualThread;
 import io.smallrye.mutiny.CompositeException;

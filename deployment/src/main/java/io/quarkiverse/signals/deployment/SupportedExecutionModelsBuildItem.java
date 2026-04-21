@@ -2,7 +2,7 @@ package io.quarkiverse.signals.deployment;
 
 import java.util.Set;
 
-import io.quarkiverse.signals.Receiver.ExecutionModel;
+import io.quarkiverse.signals.spi.Receiver.ExecutionModel;
 import io.quarkus.builder.item.SimpleBuildItem;
 
 final class SupportedExecutionModelsBuildItem extends SimpleBuildItem {

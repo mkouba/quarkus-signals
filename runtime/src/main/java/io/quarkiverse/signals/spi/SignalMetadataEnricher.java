@@ -1,7 +1,7 @@
 package io.quarkiverse.signals.spi;
 
-import io.quarkiverse.signals.Receiver.SignalContext;
 import io.quarkiverse.signals.Signal;
+import io.quarkiverse.signals.SignalContext;
 
 /**
  * Enriches the metadata of a signal emission before any receiver is invoked.

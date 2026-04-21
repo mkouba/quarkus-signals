@@ -8,7 +8,7 @@ import org.jboss.jandex.MethodParameterInfo;
 import org.jboss.jandex.Type;
 import org.jboss.jandex.Type.Kind;
 
-import io.quarkiverse.signals.Receiver.ExecutionModel;
+import io.quarkiverse.signals.spi.Receiver.ExecutionModel;
 import io.quarkus.arc.processor.BeanInfo;
 import io.quarkus.arc.processor.InvokerInfo;
 import io.quarkus.builder.item.MultiBuildItem;

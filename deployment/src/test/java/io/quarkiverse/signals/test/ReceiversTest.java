@@ -23,9 +23,9 @@ import org.awaitility.Awaitility;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
-import io.quarkiverse.signals.Receiver.ExecutionModel;
 import io.quarkiverse.signals.Receivers;
 import io.quarkiverse.signals.Signal;
+import io.quarkiverse.signals.spi.Receiver.ExecutionModel;
 import io.quarkus.test.QuarkusUnitTest;
 import io.smallrye.mutiny.Uni;
 

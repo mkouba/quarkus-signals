@@ -4,7 +4,8 @@ import jakarta.enterprise.invoke.Invoker;
 
 import org.jboss.logging.Logger;
 
-import io.quarkiverse.signals.Receiver;
+import io.quarkiverse.signals.SignalContext;
+import io.quarkiverse.signals.spi.Receiver;
 import io.smallrye.mutiny.Uni;
 
 public abstract class InvokerReceiver<SIGNAL, RESPONSE> implements Receiver<SIGNAL, RESPONSE> {

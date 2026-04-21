@@ -1,7 +1,6 @@
 package io.quarkiverse.signals.spi;
 
-import io.quarkiverse.signals.Receiver;
-import io.quarkiverse.signals.Receiver.SignalContext;
+import io.quarkiverse.signals.SignalContext;
 import io.smallrye.mutiny.Uni;
 
 /**

@@ -19,11 +19,11 @@ import jakarta.inject.Singleton;
 
 import org.jboss.logging.Logger;
 
-import io.quarkiverse.signals.Receiver;
-import io.quarkiverse.signals.Receiver.SignalContext;
 import io.quarkiverse.signals.Receivers;
+import io.quarkiverse.signals.SignalContext;
 import io.quarkiverse.signals.runtime.ReceiverDefinitionImpl.CallbackReceiver;
 import io.quarkiverse.signals.runtime.SignalsRecorder.SignalsContext;
+import io.quarkiverse.signals.spi.Receiver;
 import io.quarkiverse.signals.spi.ReceiverInterceptor;
 import io.quarkiverse.signals.spi.SignalMetadataEnricher;
 import io.quarkus.arc.All;
