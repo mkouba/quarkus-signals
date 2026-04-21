@@ -28,9 +28,11 @@ import io.quarkiverse.signals.spi.ReceiverInterceptor;
 import io.quarkiverse.signals.spi.SignalMetadataEnricher;
 import io.quarkus.arc.All;
 import io.quarkus.arc.Arc;
+import io.quarkus.arc.Unremovable;
 import io.smallrye.common.annotation.Identifier;
 import io.smallrye.mutiny.Uni;
 
+@Unremovable
 @Singleton
 public class ReceiverManager implements Receivers {
 
