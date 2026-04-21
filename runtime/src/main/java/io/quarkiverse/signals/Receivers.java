@@ -12,7 +12,21 @@ import io.quarkiverse.signals.spi.Receiver.ExecutionModel;
 import io.smallrye.mutiny.Uni;
 
 /**
- * Allows programmatic registration of {@link Receiver} instances.
+ * Allows programmatic registration of {@link Receiver} instances at runtime.
+ * <p>
+ * An instance can be injected as a CDI bean; the implementation is provided by the extension.
+ *
+ * <pre>
+ * &#064;Inject
+ * Receivers receivers;
+ *
+ * void register() {
+ *     Registration reg = receivers.newReceiver(MySignal.class)
+ *             .notify(ctx -&gt; System.out.println(ctx.signal()));
+ *     // later...
+ *     reg.unregister();
+ * }
+ * </pre>
  *
  * @see Signal
  */
