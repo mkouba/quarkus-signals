@@ -38,7 +38,7 @@ public class DefaultBlockingReceiverExecutor implements ReceiverExecutor {
             throw new IllegalStateException(
                     "The execution model %s of %s is not supported".formatted(executionModel, receiver));
         }
-        LOG.infof("Notify %s [signal=%s, emission=%s]", receiver, context.signalType(),
+        LOG.debugf("Notify %s [signal=%s, emission=%s]", receiver, context.signalType(),
                 context.emissionType());
         CompletableFuture<RESPONSE> ret = execute(executionModel, new Callable<Uni<RESPONSE>>() {
             @Override

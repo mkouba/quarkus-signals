@@ -107,7 +107,7 @@ public class ReceiverManager implements Receivers {
                 matching.add(receiver);
             }
         }
-        LOG.infof("Computed %s receivers for: %s", matching.size(), signalResolvable);
+        LOG.debugf("Computed %s receivers for: %s", matching.size(), signalResolvable);
         return new RoundRobin<>(matching);
     }
 
@@ -154,7 +154,7 @@ public class ReceiverManager implements Receivers {
                     return false;
                 }
             }
-            LOG.infof("Invalidate resolved receivers for: %s", key);
+            LOG.debugf("Invalidate resolved receivers for: %s", key);
             return true;
         });
     }

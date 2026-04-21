@@ -37,7 +37,7 @@ public class VertxReceiverExecutor implements ReceiverExecutor {
 
     @Override
     public <SIGNAL, RESPONSE> Uni<RESPONSE> execute(Receiver<SIGNAL, RESPONSE> receiver, SignalContext<SIGNAL> signalContext) {
-        LOG.infof("Notify %s [signal=%s, emission=%s]", receiver, signalContext.signalType(),
+        LOG.debugf("Notify %s [signal=%s, emission=%s]", receiver, signalContext.signalType(),
                 signalContext.emissionType());
         Context context = VertxContext.createNewDuplicatedContext(vertx.getOrCreateContext());
         VertxContextSafetyToggle.setContextSafe(context, true);
