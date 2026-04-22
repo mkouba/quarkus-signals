@@ -4,14 +4,12 @@ import java.lang.annotation.Annotation;
 import java.lang.reflect.Type;
 import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 
-import jakarta.enterprise.inject.Any;
 import jakarta.enterprise.inject.Default;
 import jakarta.enterprise.inject.spi.BeanContainer;
 import jakarta.enterprise.util.TypeLiteral;
@@ -162,11 +160,7 @@ public class ReceiverManager implements Receivers {
 
     private static Set<Annotation> effectiveQualifiers(Set<Annotation> qualifiers) {
         if (qualifiers.isEmpty()) {
-            return Set.of(Any.Literal.INSTANCE, Default.Literal.INSTANCE);
-        } else if (!qualifiers.contains(Any.Literal.INSTANCE)) {
-            Set<Annotation> effective = new HashSet<>(qualifiers);
-            effective.add(Any.Literal.INSTANCE);
-            return effective;
+            return Set.of(Default.Literal.INSTANCE);
         }
         return qualifiers;
     }

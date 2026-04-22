@@ -35,7 +35,7 @@ public interface Receivers {
     /**
      *
      * @param <SIGNAL>
-     * @param signalType
+     * @param signalType the received signal type
      * @return a new definition
      */
     <SIGNAL> ReceiverDefinition<SIGNAL, Void> newReceiver(Class<SIGNAL> signalType);
@@ -43,7 +43,7 @@ public interface Receivers {
     /**
      *
      * @param <SIGNAL>
-     * @param signalType
+     * @param signalType the received signal type
      * @return a new definition
      */
     <SIGNAL> ReceiverDefinition<SIGNAL, Void> newReceiver(TypeLiteral<SIGNAL> signalType);

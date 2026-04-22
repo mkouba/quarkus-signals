@@ -11,8 +11,8 @@ import java.lang.annotation.Target;
  *
  * <p>
  * A receiver method is a non-private non-static method that has exactly one parameter annotated with {@code @Receives}. The
- * type of the annotated parameter determines the signal type. Qualifiers declared on the annotated parameter are used during
- * type-safe resolution.
+ * type of the annotated parameter determines the received signal type. Qualifiers declared on the annotated parameter are used
+ * during type-safe resolution.
  *
  * <pre>
  * &#064;Singleton

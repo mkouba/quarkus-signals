@@ -44,7 +44,7 @@ import io.smallrye.mutiny.Uni;
 public interface Receiver<SIGNAL, RESPONSE> {
 
     /**
-     * @return the type of signal this receiver handles
+     * @return the received signal type
      */
     Type signalType();
 
