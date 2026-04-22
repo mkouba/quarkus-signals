@@ -17,8 +17,10 @@ import io.quarkus.virtual.threads.VirtualThreadsRecorder;
 import io.smallrye.common.vertx.VertxContext;
 import io.smallrye.mutiny.Uni;
 import io.smallrye.mutiny.vertx.UniHelper;
+import io.vertx.core.AsyncResult;
 import io.vertx.core.Context;
 import io.vertx.core.Future;
+import io.vertx.core.Handler;
 import io.vertx.core.Promise;
 import io.vertx.core.Vertx;
 
@@ -43,19 +45,25 @@ public class VertxReceiverExecutor implements ReceiverExecutor {
         VertxContextSafetyToggle.setContextSafe(context, true);
         Promise<RESPONSE> promise = Promise.promise();
         Future<RESPONSE> future = promise.future();
-        context.runOnContext(v -> {
-            // Activate new request context
-            ManagedContext requestContext = Arc.container().requestContext();
-            requestContext.activate();
-            execute(promise, receiver.executionModel(), new Callable<Uni<RESPONSE>>() {
-                @Override
-                public Uni<RESPONSE> call() throws Exception {
-                    return receiver.notify(signalContext);
-                }
-            });
-            future.onComplete(r -> {
-                requestContext.terminate();
-            });
+        context.runOnContext(new Handler<Void>() {
+            @Override
+            public void handle(Void v) {
+                // Activate new request context
+                ManagedContext requestContext = Arc.container().requestContext();
+                requestContext.activate();
+                execute(promise, receiver.executionModel(), new Callable<Uni<RESPONSE>>() {
+                    @Override
+                    public Uni<RESPONSE> call() throws Exception {
+                        return receiver.notify(signalContext);
+                    }
+                });
+                future.onComplete(new Handler<AsyncResult<RESPONSE>>() {
+                    @Override
+                    public void handle(AsyncResult<RESPONSE> r) {
+                        requestContext.terminate();
+                    }
+                });
+            }
         });
         return UniHelper.toUni(future);
     }

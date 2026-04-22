@@ -11,6 +11,7 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 import java.util.function.Consumer;
+import java.util.function.Supplier;
 
 import jakarta.enterprise.util.TypeLiteral;
 
@@ -87,13 +88,16 @@ public class SignalImpl<T> implements Signal<T> {
         if (receivers.isEmpty()) {
             return Uni.createFrom().voidItem();
         }
-        return Uni.createFrom().deferred(() -> {
-            var signalContext = enrich(signal, SignalContext.EmissionType.PUBLISH, null);
-            List<Uni<Object>> unis = new ArrayList<>(receivers.size());
-            for (Receiver<?, ?> receiver : receivers) {
-                unis.add(manager.executeReceiver(cast(receiver), signalContext));
+        return Uni.createFrom().deferred(new Supplier<Uni<? extends Void>>() {
+            @Override
+            public Uni<Void> get() {
+                var signalContext = enrich(signal, SignalContext.EmissionType.PUBLISH, null);
+                List<Uni<Object>> unis = new ArrayList<>(receivers.size());
+                for (Receiver<?, ?> receiver : receivers) {
+                    unis.add(manager.executeReceiver(cast(receiver), signalContext));
+                }
+                return Uni.join().all(unis).andCollectFailures().replaceWithVoid();
             }
-            return Uni.join().all(unis).andCollectFailures().replaceWithVoid();
         });
     }
 
@@ -110,9 +114,12 @@ public class SignalImpl<T> implements Signal<T> {
     private <R> Uni<R> requestUni(T signal, Type responseType) {
         var receiver = manager.nextReceiver(signalType, qualifiers, responseType);
         if (receiver != null) {
-            return Uni.createFrom().deferred(() -> {
-                var signalContext = enrich(signal, SignalContext.EmissionType.REQUEST, responseType);
-                return cast(manager.executeReceiver(cast(receiver), signalContext));
+            return Uni.createFrom().deferred(new Supplier<Uni<? extends R>>() {
+                @Override
+                public Uni<R> get() {
+                    var signalContext = enrich(signal, SignalContext.EmissionType.REQUEST, responseType);
+                    return cast(manager.executeReceiver(cast(receiver), signalContext));
+                }
             });
         } else {
             return Uni.createFrom().nullItem();
@@ -128,10 +135,13 @@ public class SignalImpl<T> implements Signal<T> {
     public Uni<Void> sendUni(T signal) {
         var receiver = manager.nextReceiver(signalType, qualifiers, null);
         if (receiver != null) {
-            return Uni.createFrom().deferred(() -> {
-                var signalContext = enrich(signal, SignalContext.EmissionType.SEND, null);
-                return manager.executeReceiver(cast(receiver), signalContext)
-                        .replaceWithVoid();
+            return Uni.createFrom().deferred(new Supplier<Uni<? extends Void>>() {
+                @Override
+                public Uni<Void> get() {
+                    var signalContext = enrich(signal, SignalContext.EmissionType.SEND, null);
+                    return manager.executeReceiver(cast(receiver), signalContext)
+                            .replaceWithVoid();
+                }
             });
         } else {
             return Uni.createFrom().voidItem();

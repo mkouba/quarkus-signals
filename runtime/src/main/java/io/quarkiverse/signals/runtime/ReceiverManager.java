@@ -9,6 +9,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
+import java.util.function.Predicate;
 
 import jakarta.enterprise.inject.Default;
 import jakarta.enterprise.inject.spi.BeanContainer;
@@ -134,27 +135,33 @@ public class ReceiverManager implements Receivers {
         }
         receivers.put(receiver.id(), receiver);
         invalidateCache(receiver);
-        return () -> {
-            receivers.remove(receiver.id());
-            invalidateCache(receiver);
+        return new Registration() {
+            @Override
+            public void unregister() {
+                receivers.remove(receiver.id());
+                invalidateCache(receiver);
+            }
         };
     }
 
     private void invalidateCache(Receiver<?, ?> receiver) {
         var qualifiers = effectiveQualifiers(receiver.qualifiers());
-        resolvedReceivers.keySet().removeIf(key -> {
-            if (!beanContainer.isMatchingEvent(key.signalType(), key.qualifiers(),
-                    receiver.signalType(), qualifiers)) {
-                return false;
-            }
-            if (key.responseType() != null) {
-                if (receiver.responseType() == null || !beanContainer.isMatchingEvent(receiver.responseType(), Set.of(),
-                        key.responseType(), Set.of())) {
+        resolvedReceivers.keySet().removeIf(new Predicate<SignalResolvable>() {
+            @Override
+            public boolean test(SignalResolvable key) {
+                if (!beanContainer.isMatchingEvent(key.signalType(), key.qualifiers(),
+                        receiver.signalType(), qualifiers)) {
                     return false;
                 }
+                if (key.responseType() != null) {
+                    if (receiver.responseType() == null || !beanContainer.isMatchingEvent(receiver.responseType(), Set.of(),
+                            key.responseType(), Set.of())) {
+                        return false;
+                    }
+                }
+                LOG.debugf("Invalidate resolved receivers for: %s", key);
+                return true;
             }
-            LOG.debugf("Invalidate resolved receivers for: %s", key);
-            return true;
         });
     }
 

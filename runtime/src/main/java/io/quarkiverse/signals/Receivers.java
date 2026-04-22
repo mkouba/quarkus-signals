@@ -92,12 +92,15 @@ public interface Receivers {
          */
         default Registration notify(Consumer<SignalContext<SIGNAL>> callback) {
             Objects.requireNonNull(callback);
-            return setResponseType(Void.class).notify(ctx -> {
-                try {
-                    callback.accept(ctx);
-                    return Uni.createFrom().voidItem();
-                } catch (Exception e) {
-                    return Uni.createFrom().failure(e);
+            return setResponseType(Void.class).notify(new Function<SignalContext<SIGNAL>, Uni<Void>>() {
+                @Override
+                public Uni<Void> apply(SignalContext<SIGNAL> ctx) {
+                    try {
+                        callback.accept(ctx);
+                        return Uni.createFrom().voidItem();
+                    } catch (Exception e) {
+                        return Uni.createFrom().failure(e);
+                    }
                 }
             });
         }
