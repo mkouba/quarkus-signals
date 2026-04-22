@@ -421,9 +421,9 @@ class SignalsProcessor {
             case ARRAY:
                 return true;
             case PARAMETERIZED_TYPE:
-                // Uni non-blocking
+                // Uni and CompletionStage are non-blocking
                 DotName name = method.returnType().asParameterizedType().name();
-                return !name.equals(DotNames.UNI);
+                return !name.equals(DotNames.UNI) && !name.equals(DotNames.COMPLETION_STAGE);
             default:
                 throw new IllegalStateException(
                         "Unsupported return type:" + methodDesc(method));

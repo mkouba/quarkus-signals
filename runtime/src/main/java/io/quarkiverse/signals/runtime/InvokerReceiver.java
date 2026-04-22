@@ -1,5 +1,7 @@
 package io.quarkiverse.signals.runtime;
 
+import java.util.concurrent.CompletionStage;
+
 import jakarta.enterprise.invoke.Invoker;
 
 import org.jboss.logging.Logger;
@@ -35,6 +37,8 @@ public abstract class InvokerReceiver<SIGNAL, RESPONSE> implements Receiver<SIGN
             Object ret = invoker.invoke(null, args);
             if (ret instanceof Uni uni) {
                 return (Uni<RESPONSE>) uni;
+            } else if (ret instanceof CompletionStage cs) {
+                return (Uni<RESPONSE>) Uni.createFrom().completionStage(cs);
             } else {
                 return (Uni<RESPONSE>) Uni.createFrom().item(ret);
             }

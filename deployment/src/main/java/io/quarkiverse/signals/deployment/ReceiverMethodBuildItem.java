@@ -66,7 +66,7 @@ final class ReceiverMethodBuildItem extends MultiBuildItem implements Comparable
         Type returnType = method.returnType();
         if (returnType.kind() == Kind.VOID) {
             return null;
-        } else if (returnType.name().equals(DotNames.UNI)) {
+        } else if (returnType.name().equals(DotNames.UNI) || returnType.name().equals(DotNames.COMPLETION_STAGE)) {
             return returnType.asParameterizedType().arguments().get(0);
         } else {
             return returnType;

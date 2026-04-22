@@ -1,5 +1,7 @@
 package io.quarkiverse.signals.deployment;
 
+import java.util.concurrent.CompletionStage;
+
 import org.jboss.jandex.DotName;
 
 import io.quarkiverse.signals.Receives;
@@ -19,6 +21,7 @@ class DotNames {
     static final DotName SIGNAL = DotName.createSimple(Signal.class);
     static final DotName SIGNAL_CONTEXT = DotName.createSimple(SignalContext.class);
     static final DotName UNI = DotName.createSimple(Uni.class);
+    static final DotName COMPLETION_STAGE = DotName.createSimple(CompletionStage.class);
     static final DotName RUN_ON_VIRTUAL_THREAD = DotName.createSimple(RunOnVirtualThread.class);
     static final DotName BLOCKING = DotName.createSimple(Blocking.class);
     static final DotName NON_BLOCKING = DotName.createSimple(NonBlocking.class);

@@ -12,6 +12,8 @@ import java.lang.annotation.Retention;
 import java.lang.annotation.Target;
 import java.time.Duration;
 import java.util.List;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionStage;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.ThreadLocalRandom;
 
@@ -36,7 +38,7 @@ public class SignalsTest {
 
     @RegisterExtension
     static final QuarkusUnitTest test = new QuarkusUnitTest()
-            .withApplicationRoot(root -> root.addClasses(MyReceivers.class, Foo.class, Reactive.class));
+            .withApplicationRoot(root -> root.addClasses(MyReceivers.class, Foo.class, Reactive.class, Async.class));
 
     @Inject
     Signal<Foo> foo;
@@ -44,6 +46,10 @@ public class SignalsTest {
     @Inject
     @Reactive
     Signal<Foo> reactiveFoo;
+
+    @Inject
+    @Async
+    Signal<Foo> asyncFoo;
 
     @Inject
     MyReceivers myReceivers;
@@ -79,6 +85,16 @@ public class SignalsTest {
                 .await().indefinitely());
         assertEquals(1, myReceivers.sequence.size());
         assertThat(myReceivers.sequence).contains("blockingString_REQ");
+
+        // CompletionStage receiver
+        myReceivers.sequence.clear();
+        assertEquals(3, asyncFoo.requestUni(new Foo("req"), Integer.class)
+                .ifNoItem()
+                .after(Duration.ofSeconds(1))
+                .fail()
+                .await().indefinitely());
+        assertEquals(1, myReceivers.sequence.size());
+        assertThat(myReceivers.sequence).contains("completionStageInt_req");
 
         // No receiver matches the response type
         myReceivers.sequence.clear();
@@ -122,6 +138,14 @@ public class SignalsTest {
             return Uni.createFrom().item(foo.name().toUpperCase());
         }
 
+        CompletionStage<Integer> completionStageInt(@Receives @Async Foo foo) {
+            if (BlockingOperationControl.isBlockingAllowed()) {
+                return CompletableFuture.failedFuture(new IllegalStateException());
+            }
+            sequence.add("completionStageInt_" + foo.name());
+            return CompletableFuture.completedFuture(foo.name().length());
+        }
+
     }
 
     record Foo(String name) {
@@ -149,6 +173,21 @@ public class SignalsTest {
     public @interface Reactive {
 
         final class Literal extends AnnotationLiteral<Reactive> implements Reactive {
+
+            public static final Literal INSTANCE = new Literal();
+
+            private static final long serialVersionUID = 1L;
+
+        }
+
+    }
+
+    @Qualifier
+    @Target({ FIELD, METHOD, PARAMETER })
+    @Retention(RUNTIME)
+    public @interface Async {
+
+        final class Literal extends AnnotationLiteral<Async> implements Async {
 
             public static final Literal INSTANCE = new Literal();
 

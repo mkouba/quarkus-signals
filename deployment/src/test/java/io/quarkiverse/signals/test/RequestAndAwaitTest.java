@@ -4,6 +4,9 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionStage;
+
 import jakarta.inject.Inject;
 import jakarta.inject.Singleton;
 
@@ -40,6 +43,12 @@ public class RequestAndAwaitTest {
     }
 
     @Test
+    public void testCompletionStageReceiver() {
+        Long result = signal.request(new Cmd("hello"), Long.class);
+        assertEquals(5L, result);
+    }
+
+    @Test
     public void testNoMatchingReceiver() {
         Double result = signal.request(new Cmd("hello"), Double.class);
         assertNull(result);
@@ -65,6 +74,11 @@ public class RequestAndAwaitTest {
         // Reactive → NON_BLOCKING
         Uni<Integer> toLength(@Receives Cmd cmd) {
             return Uni.createFrom().item(cmd.value().length());
+        }
+
+        // CompletionStage → NON_BLOCKING
+        CompletionStage<Long> toLengthLong(@Receives Cmd cmd) {
+            return CompletableFuture.completedFuture((long) cmd.value().length());
         }
     }
 

@@ -201,7 +201,7 @@ IMPORTANT: The fact that a receiver which declares no qualifier has exactly one 
 A receiver method may return a value, which is used as the response for `request` / `requestUni` emissions.
 The return value is ignored for `publish` and `send` emissions.
 The return type is also used during <<receiver-resolution>> -- only receivers whose response type is assignable to the requested type are considered.
-The method can return the value directly or wrapped in a `Uni`:
+The method can return the value directly, or wrapped in a `Uni` or `CompletionStage`:
 
 [source,java]
 ----
@@ -213,6 +213,11 @@ String onOrderPlaced(@Receives OrderPlaced order) {
 // Reactive response
 Uni<String> onOrderPlaced(@Receives OrderPlaced order) {
     return Uni.createFrom().item("confirmed-" + order.orderId());
+}
+
+// Non-blocking response
+CompletionStage<String> onOrderPlaced(@Receives OrderPlaced order) {
+    return CompletableFuture.completedFuture("confirmed-" + order.orderId());
 }
 ----
 
@@ -241,7 +246,7 @@ It is resolved using the following rules, in order of priority:
 . If the method is annotated with `@io.smallrye.common.annotation.NonBlocking`, the execution model is `NON_BLOCKING`.
 . If none of the above is present on the method, the declaring class is checked for the same annotations.
 . If no annotation is found, the default is derived from the method signature:
-* A method returning `Uni` defaults to `NON_BLOCKING` -- when Vert.x is available, it is executed on the event loop.
+* A method returning `Uni` or `CompletionStage` defaults to `NON_BLOCKING` -- when Vert.x is available, it is executed on the event loop.
 * Any other return type defaults to `BLOCKING` -- the method is offloaded to a worker thread.
 
 == Programmatic Receivers
