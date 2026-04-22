@@ -154,6 +154,39 @@ orderPlaced
 
 NOTE: Both `putMetadata()` and `setMetadata()` return a new child `Signal` instance; the original instance is not modified.
 
+=== No Matching Receiver
+
+If no receiver matches the emitted signal:
+
+* `publish()` and `send()` succeed silently -- no error is raised.
+* `request()` returns `null`.
+* `publishUni()`, `sendUni()` and `requestUni()` complete with a `null` item.
+
+=== Lazy Uni Semantics
+
+The `Uni` returned by `publishUni()`, `sendUni()`, and `requestUni()` is _lazy_: no signal is emitted until the `Uni` is subscribed.
+Each subscription triggers a new, independent emission.
+
+[source,java]
+----
+Uni<Void> uni = orderPlaced.publishUni(new OrderPlaced("123", BigDecimal.TEN));
+// No signal has been emitted yet
+
+// First subscription — emits the signal
+uni.await().indefinitely();
+
+// Second subscription of the same Uni — emits the signal again
+uni.await().indefinitely();
+----
+
+=== Error Handling
+
+If a receiver throws an exception, the failure is propagated through the `Uni` returned by the reactive emission methods.
+For `send` and `request` emissions (unicast), the receiver's exception is propagated directly.
+For `publish` emissions (multicast), where multiple receivers may fail, the failures are wrapped in a `io.smallrye.mutiny.CompositeException`.
+
+For fire-and-forget methods (`publish()` and `send()`), receiver failures are logged but not propagated to the caller.
+
 == Receiver Methods
 
 A _receiver method_ is a non-private, non-static method declared on a CDI bean.
@@ -234,6 +267,7 @@ void onOrder(@Receives SignalContext<OrderPlaced> ctx) {
     Map<String, Object> metadata = ctx.metadata();
     Set<Annotation> qualifiers = ctx.qualifiers();
     SignalContext.EmissionType emissionType = ctx.emissionType();
+    Type responseType = ctx.responseType(); // null if not a request-reply emission
 }
 ----
 
@@ -249,6 +283,11 @@ It is resolved using the following rules, in order of priority:
 . If no annotation is found, the default is derived from the method signature:
 * A method returning `Uni` or `CompletionStage` defaults to `NON_BLOCKING` -- when Vert.x is available, it is executed on the event loop.
 * Any other return type defaults to `BLOCKING` -- the method is offloaded to a worker thread.
+
+=== Request Context
+
+Each receiver execution is associated with a new CDI request context.
+This means that `@RequestScoped` beans injected into the receiver method or used by the bean that declares the receiver are unique to that particular invocation.
 
 == Programmatic Receivers
 
@@ -322,6 +361,62 @@ The resolution rules are inspired by the https://jakarta.ee/specifications/cdi/4
 
 Every signal implicitly carries the `@Any` qualifier.
 A `Signal` injection point with no qualifiers carries `@Default` (per the CDI specification).
+
+== Pipeline Pattern
+
+Receivers can inject `Signal` instances and emit new signals, enabling multi-stage processing pipelines.
+Each stage receives a signal, processes it, and forwards the result to the next stage using `request()` or `requestUni()`.
+
+[source,java]
+----
+@Singleton
+public class ValidationStage {
+
+    @Inject
+    Signal<ValidatedOrder> validatedOrder;
+
+    ShipmentConfirmation onPlaceOrder(@Receives PlaceOrder order) {
+        // Validate, then forward to the next stage and return its result
+        return validatedOrder.request(
+                new ValidatedOrder(order.orderId(), order.item(), order.quantity()),
+                ShipmentConfirmation.class);
+    }
+}
+
+@Singleton
+public class EnrichmentStage {
+
+    @Inject
+    Signal<EnrichedOrder> enrichedOrder;
+
+    Uni<ShipmentConfirmation> onValidatedOrder(@Receives ValidatedOrder order) {
+        int totalPrice = order.quantity() * 10;
+        return enrichedOrder.requestUni(
+                new EnrichedOrder(order.orderId(), order.item(), order.quantity(), totalPrice),
+                ShipmentConfirmation.class);
+    }
+}
+
+@Singleton
+public class ShipmentStage {
+
+    ShipmentConfirmation onEnrichedOrder(@Receives EnrichedOrder order) {
+        return new ShipmentConfirmation(order.orderId(), order.item(),
+                order.quantity(), order.totalPrice(), generateTrackingId());
+    }
+}
+----
+
+The pipeline is triggered by a single `request()` call, and the final response propagates back through all stages:
+
+[source,java]
+----
+@Inject
+Signal<PlaceOrder> placeOrder;
+
+ShipmentConfirmation confirmation = placeOrder.request(
+        new PlaceOrder("ORD-1", "Widget", 3), ShipmentConfirmation.class);
+----
 
 == SPI
 
