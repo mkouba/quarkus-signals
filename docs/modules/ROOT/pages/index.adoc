@@ -323,6 +323,77 @@ The resolution rules are inspired by the https://jakarta.ee/specifications/cdi/4
 Every signal implicitly carries the `@Any` qualifier.
 A `Signal` injection point with no qualifiers carries `@Default` (per the CDI specification).
 
+== SPI
+
+The `io.quarkiverse.signals.spi` package provides extension points for integrators.
+Both `SignalMetadataEnricher` and `ReceiverInterceptor` implementations must be CDI beans annotated with `@io.smallrye.common.annotation.Identifier` to define a unique identifier.
+
+=== Signal Metadata Enricher
+
+A `SignalMetadataEnricher` enriches the metadata of a signal emission _before_ any receiver is invoked.
+It is called once per emission (i.e., per call to `publish()`, `send()`, or `request()`), not per receiver.
+
+[source,java]
+----
+@Identifier("correlation-id")
+@Singleton
+public class CorrelationIdEnricher implements SignalMetadataEnricher {
+
+    @Override
+    public void enrich(EnrichmentContext context) {
+        context.putMetadata("correlationId", "corr-" + UUID.randomUUID());
+    }
+}
+----
+
+The `EnrichmentContext` provides access to the `SignalContext` and a `putMetadata()` method.
+An `IllegalArgumentException` is thrown if a metadata entry with the given key already exists.
+
+=== Receiver Interceptor
+
+A `ReceiverInterceptor` intercepts each receiver invocation.
+For multicast emissions (`publish`), it is called once per matching receiver.
+The interceptor must call `proceed()` to continue the interceptor chain and eventually invoke the receiver.
+It may transform the result, handle errors, or skip the invocation entirely by returning a different `Uni`.
+
+[source,java]
+----
+@Identifier("logging")
+@Singleton
+public class LoggingInterceptor implements ReceiverInterceptor {
+
+    @Override
+    public Uni<Object> intercept(InterceptionContext context) {
+        Log.infof("Invoking receiver for signal: %s", context.signalContext().signalType());
+        return context.proceed();
+    }
+}
+----
+
+=== Component Ordering
+
+The ordering of enrichers and interceptors relative to each other can be defined with the `@ComponentOrder` annotation.
+Components are referenced by their `@Identifier` value.
+
+[source,java]
+----
+@Identifier("correlation-id")
+@ComponentOrder(before = "timestamp") // <1>
+@Singleton
+public class CorrelationIdEnricher implements SignalMetadataEnricher {
+    // ...
+}
+
+@Identifier("timestamp")
+@Singleton
+public class TimestampEnricher implements SignalMetadataEnricher {
+    // ...
+}
+----
+<1> The `correlation-id` enricher runs _before_ the `timestamp` enricher.
+
+Cycles in the ordering are detected at build time and result in a deployment error.
+
 [[extension-configuration-reference]]
 == Extension Configuration Reference
 
