@@ -159,14 +159,15 @@ NOTE: Both `putMetadata()` and `setMetadata()` return a new child `Signal` insta
 A _receiver method_ is a non-private, non-static method declared on a CDI bean.
 It must have exactly one parameter annotated with `@Receives`.
 The type of the annotated parameter determines the _received signal type_.
+Additional parameters may be declared and are treated as injection points -- the container will obtain and inject the corresponding bean instances when the receiver is invoked, just like https://jakarta.ee/specifications/cdi/4.1/jakarta-cdi-spec-4.1#observes[CDI observer methods].
 
 [source,java]
 ----
 @ApplicationScoped
 public class OrderHandlers {
 
-    void onOrderPlaced(@Receives OrderPlaced order) {
-        // handle the signal
+    void onOrderPlaced(@Receives OrderPlaced order, NotificationService notifications) {
+        notifications.send("Order placed: " + order.orderId());
     }
 }
 ----
