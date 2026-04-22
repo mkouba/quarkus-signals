@@ -11,6 +11,7 @@ import org.junit.jupiter.api.extension.RegisterExtension;
 
 import io.quarkiverse.signals.Signal;
 import io.quarkus.test.QuarkusUnitTest;
+import io.smallrye.mutiny.Uni;
 
 /**
  * Verifies that emitting a signal with no matching receivers does not fail.
@@ -37,8 +38,26 @@ public class SignalNoReceiverTest {
     }
 
     @Test
+    public void testPublishUniNoReceiver() {
+        Uni<Void> result = orphan.publishUni(new Orphan("nobody"));
+        assertNull(result.ifNoItem().after(Duration.ofSeconds(1)).fail()
+                .await().indefinitely());
+    }
+
+    @Test
+    public void testSendUniNoReceiver() {
+        Uni<Void> result = orphan.sendUni(new Orphan("nobody"));
+        assertNull(result.ifNoItem().after(Duration.ofSeconds(1)).fail()
+                .await().indefinitely());
+    }
+
+    @Test
     public void testRequestNoReceiver() {
-        // Should return null when no receiver matches
+        assertNull(orphan.request(new Orphan("nobody"), String.class));
+    }
+
+    @Test
+    public void testRequestUniNoReceiver() {
         String result = orphan.requestUni(new Orphan("nobody"), String.class)
                 .ifNoItem()
                 .after(Duration.ofSeconds(1))
