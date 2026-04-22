@@ -13,9 +13,9 @@ public abstract class InvokerReceiver<SIGNAL, RESPONSE> implements Receiver<SIGN
     private static final Logger LOG = Logger.getLogger(InvokerReceiver.class);
 
     private final Invoker<SIGNAL, RESPONSE> invoker;
-    private final ReceiveInfo receiveInfo;
+    private final ReceiverInfo receiveInfo;
 
-    public InvokerReceiver(Invoker<SIGNAL, RESPONSE> invoker, ReceiveInfo receiverInfo) {
+    public InvokerReceiver(Invoker<SIGNAL, RESPONSE> invoker, ReceiverInfo receiverInfo) {
         this.invoker = invoker;
         this.receiveInfo = receiverInfo;
     }
@@ -25,29 +25,26 @@ public abstract class InvokerReceiver<SIGNAL, RESPONSE> implements Receiver<SIGN
     public Uni<RESPONSE> notify(SignalContext<SIGNAL> context) {
         Object[] args = new Object[receiveInfo.totalParams()];
         for (int i = 0; i < receiveInfo.totalParams(); i++) {
-            if (i == receiveInfo.receiveArgPosition()) {
+            if (i == receiveInfo.signalArgPosition()) {
                 args[i] = receiveInfo.receiveContext() ? context : context.signal();
             } else {
                 args[i] = null;
             }
         }
-        Object result;
         try {
-            result = invoker.invoke(null, args);
+            Object ret = invoker.invoke(null, args);
+            if (ret instanceof Uni uni) {
+                return (Uni<RESPONSE>) uni;
+            } else {
+                return (Uni<RESPONSE>) Uni.createFrom().item(ret);
+            }
         } catch (Throwable e) {
             LOG.warnf("Notification of InvokerReceiver [%s] failed: %s", invoker.getClass().getName(), e);
             return Uni.createFrom().failure(e);
         }
-        Uni<RESPONSE> ret;
-        if (receiveInfo.returnsUni()) {
-            ret = (Uni<RESPONSE>) result;
-        } else {
-            ret = (Uni<RESPONSE>) Uni.createFrom().item(result);
-        }
-        return ret;
     }
 
-    public record ReceiveInfo(short receiveArgPosition, boolean receiveContext, short totalParams, boolean returnsUni) {
+    public record ReceiverInfo(short signalArgPosition, boolean receiveContext, short totalParams) {
     }
 
     public String toString() {

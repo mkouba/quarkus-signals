@@ -19,16 +19,16 @@ final class ReceiverMethodBuildItem extends MultiBuildItem implements Comparable
     private final BeanInfo bean;
     private final InvokerInfo invoker;
     private final MethodInfo method;
-    private final MethodParameterInfo receiveParam;
+    private final MethodParameterInfo signalParam;
     private final List<AnnotationInstance> qualifiers;
 
-    public ReceiverMethodBuildItem(ExecutionModel executionModel, BeanInfo bean,
-            InvokerInfo invoker, MethodInfo method, MethodParameterInfo receivesParam, List<AnnotationInstance> qualifiers) {
+    ReceiverMethodBuildItem(ExecutionModel executionModel, BeanInfo bean,
+            InvokerInfo invoker, MethodInfo method, MethodParameterInfo signalParam, List<AnnotationInstance> qualifiers) {
         this.executionModel = executionModel;
         this.bean = bean;
         this.invoker = invoker;
         this.method = method;
-        this.receiveParam = receivesParam;
+        this.signalParam = signalParam;
         this.qualifiers = qualifiers;
     }
 
@@ -48,12 +48,12 @@ final class ReceiverMethodBuildItem extends MultiBuildItem implements Comparable
         return method;
     }
 
-    public MethodParameterInfo getReceiveParam() {
-        return receiveParam;
+    public MethodParameterInfo getSignalParam() {
+        return signalParam;
     }
 
     public Type getSignalType() {
-        Type paramType = receiveParam.type();
+        Type paramType = signalParam.type();
         if (paramType.kind() == Type.Kind.PARAMETERIZED_TYPE
                 && paramType.asParameterizedType().name().equals(DotNames.SIGNAL_CONTEXT)) {
             // Unwrap SignalContext<T> to T

@@ -37,7 +37,7 @@ import org.jboss.jandex.gizmo2.Jandex2Gizmo;
 import io.quarkiverse.signals.Signal;
 import io.quarkiverse.signals.runtime.DefaultBlockingReceiverExecutor;
 import io.quarkiverse.signals.runtime.InvokerReceiver;
-import io.quarkiverse.signals.runtime.InvokerReceiver.ReceiveInfo;
+import io.quarkiverse.signals.runtime.InvokerReceiver.ReceiverInfo;
 import io.quarkiverse.signals.runtime.ReceiverManager;
 import io.quarkiverse.signals.runtime.SignalBeanCreator;
 import io.quarkiverse.signals.runtime.SignalsRecorder;
@@ -99,18 +99,18 @@ class SignalsProcessor {
                 if (params.isEmpty()) {
                     continue;
                 }
-                MethodParameterInfo receiveParam = null;
+                MethodParameterInfo signalParam = null;
                 for (MethodParameterInfo param : params) {
                     if (param.hasDeclaredAnnotation(DotNames.RECEIVES)) {
-                        if (receiveParam != null) {
+                        if (signalParam != null) {
                             throw new IllegalStateException(
                                     "A receiver method must have exactly one parameter annotated with @Receives: "
                                             + methodDesc(method));
                         }
-                        receiveParam = param;
+                        signalParam = param;
                     }
                 }
-                if (receiveParam != null) {
+                if (signalParam != null) {
                     if (Modifier.isPrivate(method.flags())) {
                         throw new IllegalStateException(
                                 "A receiver method must not be private: " + methodDesc(method));
@@ -128,19 +128,19 @@ class SignalsProcessor {
                             .withInstanceLookup();
                     if (params.size() > 1) {
                         for (MethodParameterInfo param : params) {
-                            if (param != receiveParam) {
+                            if (param != signalParam) {
                                 invokerBuilder.withArgumentLookup(param.position());
                             }
                         }
                     }
                     List<AnnotationInstance> qualifiers = new ArrayList<>();
-                    for (AnnotationInstance a : receiveParam.declaredAnnotations()) {
+                    for (AnnotationInstance a : signalParam.declaredAnnotations()) {
                         if (knownQualifiers.contains(a.name())) {
                             qualifiers.add(a);
                         }
                     }
                     receivers.produce(
-                            new ReceiverMethodBuildItem(executionModel, bean, invokerBuilder.build(), method, receiveParam,
+                            new ReceiverMethodBuildItem(executionModel, bean, invokerBuilder.build(), method, signalParam,
                                     qualifiers));
                 }
             }
@@ -180,9 +180,9 @@ class SignalsProcessor {
                     + "_"
                     + HashUtil.sha256(receiver.getMethod().toString());
             gizmo.class_(receiverClassName, cc -> {
-                var receiveParamType = receiver.getReceiveParam().type();
-                if (receiveParamType.kind() == Kind.PRIMITIVE) {
-                    receiveParamType = PrimitiveType.box(receiveParamType.asPrimitiveType());
+                var signalParamType = receiver.getSignalParam().type();
+                if (signalParamType.kind() == Kind.PRIMITIVE) {
+                    signalParamType = PrimitiveType.box(signalParamType.asPrimitiveType());
                 }
                 var returnType = receiver.getMethod().returnType();
                 if (returnType.kind() != Kind.VOID && returnType.kind() == Kind.PRIMITIVE) {
@@ -190,7 +190,7 @@ class SignalsProcessor {
                 }
                 cc.extends_(
                         GenericType.ofClass(InvokerReceiver.class,
-                                Jandex2Gizmo.typeArgumentOf(receiveParamType),
+                                Jandex2Gizmo.typeArgumentOf(signalParamType),
                                 returnType.kind() == Kind.VOID ? TypeArgument.of(Void.class)
                                         : Jandex2Gizmo.typeArgumentOf(returnType)));
 
@@ -213,17 +213,16 @@ class SignalsProcessor {
                 cc.constructor(con -> {
                     con.body(bc -> {
                         Expr invoker = bc.new_(receiver.getInvoker().getClassDesc());
-                        Expr receiveInfo = bc.new_(ReceiveInfo.class,
-                                Const.of(receiver.getReceiveParam().position()),
-                                Const.of(receiver.getReceiveParam().type().name().equals(DotNames.SIGNAL_CONTEXT)),
-                                Const.of((short) receiver.getMethod().parametersCount()),
-                                Const.of(receiver.getMethod().returnType().name().equals(DotNames.UNI)));
-                        bc.invokeSpecial(ConstructorDesc.of(InvokerReceiver.class, Invoker.class, ReceiveInfo.class),
+                        Expr receiveInfo = bc.new_(ReceiverInfo.class,
+                                Const.of(receiver.getSignalParam().position()),
+                                Const.of(receiver.getSignalParam().type().name().equals(DotNames.SIGNAL_CONTEXT)),
+                                Const.of((short) receiver.getMethod().parametersCount()));
+                        bc.invokeSpecial(ConstructorDesc.of(InvokerReceiver.class, Invoker.class, ReceiverInfo.class),
                                 cc.this_(), invoker, receiveInfo);
 
                         LocalVar tccl = bc.localVar("tccl", bc.invokeVirtual(
                                 MethodDesc.of(Thread.class, "getContextClassLoader", ClassLoader.class), bc.currentThread()));
-                        // Signal types
+                        // Signal type
                         RuntimeTypeCreator rttc = RuntimeTypeCreator.of(bc).withTCCL(tccl);
                         bc.set(cc.this_().field(signalTypeField), rttc.create(receiver.getSignalType()));
                         // Qualifiers
@@ -371,7 +370,6 @@ class SignalsProcessor {
 
     @BuildStep
     ReceiverExecutorImplementationBuildItem supportedExecutionModels(Capabilities capabilities) {
-        Set<ExecutionModel> supportedModels;
         if (capabilities.isPresent(Capability.VERTX)) {
             return new ReceiverExecutorImplementationBuildItem(VERTX);
         } else {

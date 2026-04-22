@@ -199,6 +199,7 @@ IMPORTANT: The fact that a receiver which declares no qualifier has exactly one 
 === Return Values
 
 A receiver method may return a value, which is used as the response for `request` / `requestUni` emissions.
+The return value is ignored for `publish` and `send` emissions.
 The return type is also used during <<receiver-resolution>> -- only receivers whose response type is assignable to the requested type are considered.
 The method can return the value directly or wrapped in a `Uni`:
 
